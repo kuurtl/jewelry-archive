@@ -13,8 +13,7 @@ export default async function HomePage() {
   }
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Jewelry Archive</h1>
+    <main style={{ padding: 12 }}>
       <JewelryList items={data ?? []} />
     </main>
   );

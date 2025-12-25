@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
+import { useQueryState } from '@/lib/query-context';
 
 type JewelryListItem = {
   jo_number: string;
@@ -10,13 +11,37 @@ type JewelryListItem = {
 };
 
 export default function JewelryList({ items }: { items: JewelryListItem[] }) {
-  const shuffled = useMemo(() => {
-    return [...items].sort(() => Math.random() - 0.5).slice(0, 100);
-  }, [items]);
+  const { searchText, classification } = useQueryState();
+
+  const visibleItems = useMemo(() => {
+    let filtered = items;
+
+    // classification filter (Postgres-style)
+    if (classification !== 'all') {
+      filtered = filtered.filter(
+        (item) => item.classification === classification
+      );
+    }
+
+    // temporary Postgres-only search (text includes)
+    if (searchText.trim().length >= 2) {
+      const q = searchText.toLowerCase();
+
+      filtered = filtered.filter((item) => {
+        return (
+          item.jo_number.toLowerCase().includes(q) ||
+          (item.item_name?.toLowerCase().includes(q) ?? false)
+        );
+      });
+    }
+
+    // randomize and cap results
+    return [...filtered].sort(() => Math.random() - 0.5).slice(0, 100);
+  }, [items, classification, searchText]);
 
   return (
     <ul style={{ listStyle: 'none', padding: 0, marginTop: 16 }}>
-      {shuffled.map((item) => (
+      {visibleItems.map((item) => (
         <li
           key={item.jo_number}
           style={{
