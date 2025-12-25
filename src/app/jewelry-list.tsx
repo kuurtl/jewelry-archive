@@ -8,10 +8,11 @@ type JewelryListItem = {
   jo_number: string;
   item_name: string | null;
   classification: string | null;
+  jewelry_components?: unknown;
 };
 
 export default function JewelryList({ items }: { items: JewelryListItem[] }) {
-  const { searchText, classification } = useQueryState();
+  const { searchText, classification, includeComponents } = useQueryState();
 
   const visibleItems = useMemo(() => {
     let filtered = items;
@@ -28,16 +29,26 @@ export default function JewelryList({ items }: { items: JewelryListItem[] }) {
       const q = searchText.toLowerCase();
 
       filtered = filtered.filter((item) => {
-        return (
-          item.jo_number.toLowerCase().includes(q) ||
-          (item.item_name?.toLowerCase().includes(q) ?? false)
-        );
+        const baseText =
+          item.jo_number +
+          ' ' +
+          (item.item_name ?? '') +
+          ' ' +
+          (item.classification ?? '');
+
+        const componentText = includeComponents
+          ? ' ' + JSON.stringify(item.jewelry_components ?? {})
+          : '';
+
+        const searchable = (baseText + componentText).toLowerCase();
+
+        return searchable.includes(q);
       });
     }
 
     // randomize and cap results
     return [...filtered].sort(() => Math.random() - 0.5).slice(0, 100);
-  }, [items, classification, searchText]);
+  }, [items, classification, searchText, includeComponents]);
 
   return (
     <ul style={{ listStyle: 'none', padding: 0, marginTop: 16 }}>

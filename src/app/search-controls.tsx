@@ -73,3 +73,26 @@ export function ClassificationSelect() {
     </select>
   );
 }
+
+export function IncludeComponentsCheckbox() {
+  const { includeComponents, setIncludeComponents } = useQueryState();
+
+  return (
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 14,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={includeComponents}
+        onChange={(e) => setIncludeComponents(e.target.checked)}
+      />
+      Include components
+    </label>
+  );
+}

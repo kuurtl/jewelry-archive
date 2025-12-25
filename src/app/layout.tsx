@@ -1,6 +1,10 @@
 import './globals.css';
 import { QueryProvider } from '@/lib/query-context';
-import { SearchInput, ClassificationSelect } from './search-controls';
+import {
+  SearchInput,
+  ClassificationSelect,
+  IncludeComponentsCheckbox,
+} from './search-controls';
 
 export default function RootLayout({
   children,
@@ -16,15 +20,13 @@ export default function RootLayout({
               padding: '12px 24px',
               borderBottom: '1px solid #e5e7eb',
               display: 'flex',
-              gap: 12,
+              gap: 16,
               alignItems: 'center',
             }}
           >
-            {/* Search input (logic wired, no Algolia yet) */}
             <SearchInput />
-
-            {/* Classification dropdown (placeholder for now) */}
             <ClassificationSelect />
+            <IncludeComponentsCheckbox />
           </header>
 
           <main>{children}</main>
