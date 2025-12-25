@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabaseServer';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 
 type JewelryRecord = {
   jo_number: string;
@@ -33,6 +34,29 @@ export default async function JewelryDetailPage({ params }: PageProps) {
 
   return (
     <main style={{ padding: 24, maxWidth: 900 }}>
+      {/* Header */}
+      <header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: 24,
+          paddingBottom: 12,
+          borderBottom: '1px solid #e5e7eb',
+        }}
+      >
+        <Link
+          href="/"
+          style={{
+            textDecoration: 'none',
+            fontSize: 14,
+            color: '#2563eb',
+          }}
+        >
+          ← Back to archive
+        </Link>
+      </header>
+
+      {/* Content */}
       <h1 style={{ fontSize: 24, fontWeight: 600 }}>JO {record.jo_number}</h1>
 
       <div style={{ marginTop: 8, opacity: 0.7 }}>
@@ -52,13 +76,13 @@ export default async function JewelryDetailPage({ params }: PageProps) {
             marginTop: 12,
             padding: 16,
             background: '#f5f5f5',
+            color: '#111',
             borderRadius: 6,
             fontSize: 13,
             overflowX: 'auto',
-            color: 'black',
           }}
         >
-          {JSON.stringify(record, null, 2)}
+          {JSON.stringify(record.jewelry_components, null, 2)}
         </pre>
       </section>
     </main>
