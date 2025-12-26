@@ -18,6 +18,8 @@ export function SearchInput() {
         padding: 8,
         border: '1px solid #ccc',
         borderRadius: 4,
+        backgroundColor: '#111',
+        color: '#f9fafb',
       }}
     />
   );
@@ -61,6 +63,8 @@ export function ClassificationSelect() {
         border: '1px solid #ccc',
         borderRadius: 4,
         minWidth: 200,
+        backgroundColor: '#111',
+        color: '#f9fafb',
       }}
     >
       <option value="all">All classifications</option>
