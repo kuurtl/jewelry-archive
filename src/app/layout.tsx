@@ -13,22 +13,41 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body style={{ backgroundColor: '#0b0b0b' }}>
         <QueryProvider>
+          {/* HEADER SHELL */}
           <header
             style={{
-              padding: '12px 24px',
-              borderBottom: '1px solid #e5e7eb',
-              display: 'flex',
-              gap: 16,
-              alignItems: 'center',
+              padding: '16px 0', // vertical spacing only
             }}
           >
-            <SearchInput />
-            <ClassificationSelect />
-            <IncludeComponentsCheckbox />
+            <div
+              style={{
+                maxWidth: '1600px',
+                margin: '0 auto',
+                padding: '0 24px',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 16,
+                  alignItems: 'center',
+
+                  padding: 20,
+                  borderRadius: 16,
+                  backgroundColor: '#111',
+                  border: '1px solid rgba(255, 255, 255, 0.28)', // 👈 visible white
+                }}
+              >
+                <SearchInput />
+                <ClassificationSelect />
+                <IncludeComponentsCheckbox />
+              </div>
+            </div>
           </header>
 
+          {/* PAGE CONTENT */}
           <main>{children}</main>
         </QueryProvider>
       </body>

@@ -17,7 +17,6 @@ type PageProps = {
 
 export default async function JewelryDetailPage({ params }: PageProps) {
   const { jo_number } = await params;
-
   const supabase = createSupabaseServerClient();
 
   const { data, error } = await supabase
@@ -33,58 +32,81 @@ export default async function JewelryDetailPage({ params }: PageProps) {
   const record = data as JewelryRecord;
 
   return (
-    <main style={{ padding: 24, maxWidth: 900 }}>
-      {/* Header */}
-      <header
+    <main
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#0b0b0b',
+        padding: '24px 0',
+      }}
+    >
+      {/* APP SHELL */}
+      <div
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: 24,
-          paddingBottom: 12,
-          borderBottom: '1px solid #e5e7eb',
+          maxWidth: '1600px',
+          margin: '0 auto',
+          padding: '0 24px',
         }}
       >
-        <Link
-          href="/"
+        {/* DETAIL PANEL */}
+        <div
           style={{
-            textDecoration: 'none',
-            fontSize: 14,
-            color: '#2563eb',
+            border: '1px solid rgba(255, 255, 255, 0.28)',
+            borderRadius: 16,
+            padding: 24,
+            backgroundColor: '#111',
           }}
         >
-          ← Back to archive
-        </Link>
-      </header>
+          {/* Back link */}
+          <Link
+            href="/"
+            style={{
+              display: 'inline-block',
+              marginBottom: 16,
+              fontSize: 14,
+              color: '#93c5fd',
+              textDecoration: 'none',
+            }}
+          >
+            ← Back to archive
+          </Link>
 
-      {/* Content */}
-      <h1 style={{ fontSize: 24, fontWeight: 600 }}>JO {record.jo_number}</h1>
+          {/* Title */}
+          <h1 style={{ fontSize: 24, fontWeight: 600 }}>
+            JO {record.jo_number}
+          </h1>
 
-      <div style={{ marginTop: 8, opacity: 0.7 }}>
-        {record.item_name ?? '(no name)'}
+          <div style={{ marginTop: 8, opacity: 0.7 }}>
+            {record.item_name ?? '(no name)'}
+          </div>
+
+          <div style={{ marginTop: 6, fontSize: 14 }}>
+            Classification:{' '}
+            <strong>{record.classification ?? 'Unclassified'}</strong>
+          </div>
+
+          {/* Components */}
+          <section style={{ marginTop: 24 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600 }}>
+              Jewelry Components
+            </h2>
+
+            <pre
+              style={{
+                marginTop: 12,
+                padding: 16,
+                backgroundColor: '#0b0b0b',
+                color: '#f9fafb',
+                borderRadius: 12,
+                fontSize: 13,
+                overflowX: 'auto',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+              }}
+            >
+              {JSON.stringify(record.jewelry_components, null, 2)}
+            </pre>
+          </section>
+        </div>
       </div>
-
-      <div style={{ marginTop: 4, fontSize: 14 }}>
-        Classification:{' '}
-        <strong>{record.classification ?? 'Unclassified'}</strong>
-      </div>
-
-      <section style={{ marginTop: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600 }}>Jewelry Components</h2>
-
-        <pre
-          style={{
-            marginTop: 12,
-            padding: 16,
-            background: '#f5f5f5',
-            color: '#111',
-            borderRadius: 6,
-            fontSize: 13,
-            overflowX: 'auto',
-          }}
-        >
-          {JSON.stringify(record.jewelry_components, null, 2)}
-        </pre>
-      </section>
     </main>
   );
 }
