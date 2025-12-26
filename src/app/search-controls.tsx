@@ -3,20 +3,29 @@
 import { useEffect, useState } from 'react';
 import { useQueryState } from '@/lib/query-context';
 import { supabaseClient } from '@/lib/supabaseClient';
+import { useRouter, usePathname } from 'next/navigation';
 
 export function SearchInput() {
   const { searchText, setSearchText } = useQueryState();
+  const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <input
-      type="text"
-      placeholder="Search jewelry…"
       value={searchText}
-      onChange={(e) => setSearchText(e.target.value)}
+      onChange={(e) => {
+        const value = e.target.value;
+        setSearchText(value);
+
+        // Redirect to list view when searching from product pages
+        if (value.trim().length >= 2 && pathname !== '/') {
+          router.push('/');
+        }
+      }}
       style={{
         flex: 1,
         padding: 8,
-        border: '1px solid #ccc',
+        border: '1px solid #555',
         borderRadius: 4,
         backgroundColor: '#111',
         color: '#f9fafb',
@@ -28,6 +37,8 @@ export function SearchInput() {
 export function ClassificationSelect() {
   const { classification, setClassification } = useQueryState();
   const [options, setOptions] = useState<string[]>([]);
+  const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     async function loadClassifications() {
@@ -57,7 +68,15 @@ export function ClassificationSelect() {
   return (
     <select
       value={classification}
-      onChange={(e) => setClassification(e.target.value)}
+      onChange={(e) => {
+        const value = e.target.value;
+        setClassification(value);
+
+        // Redirect to list view if changed from a product page
+        if (pathname !== '/') {
+          router.push('/');
+        }
+      }}
       style={{
         padding: 8,
         border: '1px solid #ccc',
@@ -80,6 +99,8 @@ export function ClassificationSelect() {
 
 export function IncludeComponentsCheckbox() {
   const { includeComponents, setIncludeComponents } = useQueryState();
+  const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <label
@@ -94,7 +115,13 @@ export function IncludeComponentsCheckbox() {
       <input
         type="checkbox"
         checked={includeComponents}
-        onChange={(e) => setIncludeComponents(e.target.checked)}
+        onChange={(e) => {
+          setIncludeComponents(e.target.checked);
+
+          if (pathname !== '/') {
+            router.push('/');
+          }
+        }}
       />
       Include components
     </label>
