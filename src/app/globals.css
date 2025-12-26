@@ -1,10 +1,14 @@
 @import 'tailwindcss';
 
+/* --------------------------------
+   Global design tokens
+-------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0b0b;
+  --foreground: #ffffff;
 }
 
+/* Optional theme variables (safe to keep) */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -12,15 +16,46 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* --------------------------------
+   Explicit dark-mode handling
+   (Safari/macOS needs this)
+-------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0b0b0b;
+    --foreground: #ffffff;
   }
 }
 
+/* --------------------------------
+   Base document styles
+-------------------------------- */
+html,
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* --------------------------------
+   Normalize text + links
+-------------------------------- */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+pre,
+code {
+  color: inherit;
+}
+
+/* --------------------------------
+   Ensure form controls inherit color
+-------------------------------- */
+input,
+select,
+textarea,
+button {
+  color: inherit;
 }
