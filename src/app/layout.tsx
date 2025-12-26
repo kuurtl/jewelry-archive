@@ -33,7 +33,7 @@ export default function RootLayout({
                   display: 'flex',
                   gap: 16,
                   alignItems: 'center',
-
+                  flexWrap: 'wrap',
                   padding: 20,
                   borderRadius: 16,
                   backgroundColor: '#111',

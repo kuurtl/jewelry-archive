@@ -23,7 +23,7 @@ export function SearchInput() {
         }
       }}
       style={{
-        flex: 1,
+        flex: '1 1 300px',
         padding: 8,
         border: '1px solid #555',
         borderRadius: 4,
