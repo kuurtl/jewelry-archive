@@ -14,17 +14,29 @@ type JewelryListItem = {
 export default function JewelryList({ items }: { items: JewelryListItem[] }) {
   const { searchText, classification, includeComponents } = useQueryState();
 
-  const visibleItems = useMemo(() => {
-    let filtered = items;
+  /**
+   * Randomize ONCE when items change.
+   * Prevents reshuffling on every keystroke.
+   */
+  const randomizedItems = useMemo(() => {
+    return [...items].sort(() => Math.random() - 0.5);
+  }, [items]);
 
-    // classification filter (Postgres-style)
+  /**
+   * Apply filters to the already-randomized list.
+   * Order stays stable while searching.
+   */
+  const visibleItems = useMemo(() => {
+    let filtered = randomizedItems;
+
+    // classification filter
     if (classification !== 'all') {
       filtered = filtered.filter(
         (item) => item.classification === classification
       );
     }
 
-    // temporary Postgres-only search (text includes)
+    // text search (client-side)
     if (searchText.trim().length >= 2) {
       const q = searchText.toLowerCase();
 
@@ -46,9 +58,8 @@ export default function JewelryList({ items }: { items: JewelryListItem[] }) {
       });
     }
 
-    // randomize and cap results
-    return [...filtered].sort(() => Math.random() - 0.5).slice(0, 100);
-  }, [items, classification, searchText, includeComponents]);
+    return filtered;
+  }, [randomizedItems, classification, searchText, includeComponents]);
 
   return (
     <ul style={{ listStyle: 'none', padding: 0, marginTop: 16 }}>
