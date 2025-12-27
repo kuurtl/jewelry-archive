@@ -14,19 +14,33 @@ const pesoFormatter = new Intl.NumberFormat('en-PH', {
 });
 
 /* -------------------------
-   Mock DB prices (demo values)
+   Readable datetime formatter
 -------------------------- */
-const METAL_PRICES = {
-  '14k': 4994.62,
-  '18k': 6421.65,
-  silver: 149.67,
-};
+const readableDateTime = (iso: string) =>
+  new Date(iso)
+    .toLocaleString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    })
+    .replace(',', ' –');
 
 type JewelryRecord = {
   jo_number: string;
   item_name: string | null;
   classification: string | null;
   jewelry_components: Record<string, unknown>;
+};
+
+type MetalPrices = {
+  gold_14k: number;
+  gold_18k: number;
+  silver: number;
+  updated_at: string;
 };
 
 type MetalKey = '14k' | '18k' | 'silver';
@@ -37,11 +51,13 @@ type MetalKey = '14k' | '18k' | 'silver';
 function MetalPanel({
   label,
   price,
+  updatedAt,
   weights,
   setWeights,
 }: {
   label: string;
   price: number;
+  updatedAt: string;
   weights: number[];
   setWeights: (w: number[]) => void;
 }) {
@@ -80,7 +96,9 @@ function MetalPanel({
           marginTop: -4,
         }}
       >
-        Current Price: {pesoFormatter.format(price)}/g as of Timestamp, Date.
+        Current Price: {pesoFormatter.format(price)}/g
+        <br />
+        as of {readableDateTime(updatedAt)}
       </div>
 
       <button
@@ -139,14 +157,22 @@ function MetalPanel({
 -------------------------- */
 export default function JewelryDetailClient({
   record,
+  prices,
 }: {
   record: JewelryRecord;
+  prices: MetalPrices;
 }) {
   const [showCalculator, setShowCalculator] = useState(false);
 
   const [weights14k, setWeights14k] = useState<number[]>([]);
   const [weights18k, setWeights18k] = useState<number[]>([]);
   const [weightsSilver, setWeightsSilver] = useState<number[]>([]);
+
+  const METAL_PRICES = {
+    '14k': prices.gold_14k,
+    '18k': prices.gold_18k,
+    silver: prices.silver,
+  };
 
   const breakdown = useMemo(() => {
     const calc = (weights: number[], price: number) =>
@@ -160,7 +186,7 @@ export default function JewelryDetailClient({
       '18k': calc(weights18k, METAL_PRICES['18k']),
       silver: calc(weightsSilver, METAL_PRICES.silver),
     };
-  }, [weights14k, weights18k, weightsSilver]);
+  }, [weights14k, weights18k, weightsSilver, METAL_PRICES]);
 
   function resetCalculator() {
     setWeights14k([]);
@@ -241,7 +267,9 @@ export default function JewelryDetailClient({
             background: '#111',
           }}
         >
-          <h2 style={{ fontSize: 24, fontWeight: 600 }}>Jewelry Components</h2>
+          <h2 style={{ fontSize: 24, fontWeight: 600 }}>
+            Jewelry Components
+          </h2>
 
           <pre
             style={{
@@ -262,9 +290,7 @@ export default function JewelryDetailClient({
         {/* TOGGLE BUTTON */}
         <button
           onClick={() => {
-            if (showCalculator) {
-              resetCalculator();
-            }
+            if (showCalculator) resetCalculator();
             setShowCalculator((v) => !v);
           }}
           style={{
@@ -312,18 +338,21 @@ export default function JewelryDetailClient({
               <MetalPanel
                 label="14k Gold"
                 price={METAL_PRICES['14k']}
+                updatedAt={prices.updated_at}
                 weights={weights14k}
                 setWeights={setWeights14k}
               />
               <MetalPanel
                 label="18k Gold"
                 price={METAL_PRICES['18k']}
+                updatedAt={prices.updated_at}
                 weights={weights18k}
                 setWeights={setWeights18k}
               />
               <MetalPanel
                 label="Silver"
                 price={METAL_PRICES.silver}
+                updatedAt={prices.updated_at}
                 weights={weightsSilver}
                 setWeights={setWeightsSilver}
               />
@@ -333,7 +362,6 @@ export default function JewelryDetailClient({
             <h3
               style={{
                 textAlign: 'center',
-                fontFamily: 'monospace',
                 fontSize: 16,
                 fontWeight: 600,
               }}
@@ -346,7 +374,6 @@ export default function JewelryDetailClient({
                 display: 'flex',
                 gap: 16,
                 flexWrap: 'wrap',
-                fontFamily: 'monospace',
                 fontSize: 13,
               }}
             >
@@ -356,8 +383,10 @@ export default function JewelryDetailClient({
                   {rows.map((r, i) => (
                     <div key={i}>
                       {r.weight}g ×{' '}
-                      {pesoFormatter.format(METAL_PRICES[metal as MetalKey])} ={' '}
-                      {pesoFormatter.format(r.subtotal)}
+                      {pesoFormatter.format(
+                        METAL_PRICES[metal as MetalKey]
+                      )}{' '}
+                      = {pesoFormatter.format(r.subtotal)}
                     </div>
                   ))}
                 </div>
@@ -365,13 +394,12 @@ export default function JewelryDetailClient({
             </div>
 
             {/* FINAL COST */}
-            <hr></hr>
+            <hr />
             <div
               style={{
                 fontSize: 28,
                 fontWeight: 700,
                 marginTop: 8,
-                fontFamily: 'monospace',
               }}
             >
               Final Updated Cost: {pesoFormatter.format(total)}
