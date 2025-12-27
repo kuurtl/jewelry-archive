@@ -80,7 +80,7 @@ function MetalPanel({
           marginTop: -4,
         }}
       >
-        Current Price: {pesoFormatter.format(price)} / g
+        Current Price: {pesoFormatter.format(price)}/g as of Timestamp, Date.
       </div>
 
       <button
@@ -193,22 +193,21 @@ export default function JewelryDetailClient({
         }}
       >
         {/* BACK TO ARCHIVE (TEXT LINK) */}
-<div style={{ marginBottom: 4 }}>
-  <Link
-    href="/"
-    style={{
-      alignSelf: 'flex-start',
-      color: 'rgba(255,255,255,0.7)',
-      fontSize: 14,
-      fontWeight: 400,
-      textDecoration: 'none',
-      cursor: 'pointer',
-    }}
-  >
-    ← Back to archive
-  </Link>
-</div>
-
+        <div style={{ marginBottom: 4 }}>
+          <Link
+            href="/"
+            style={{
+              alignSelf: 'flex-start',
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: 14,
+              fontWeight: 400,
+              textDecoration: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            ← Back to archive
+          </Link>
+        </div>
 
         {/* PRODUCT INFO */}
         <div
