@@ -8,6 +8,9 @@ const TROY_OUNCE_TO_GRAMS = 31.1035;
 const GOLD_18K_PURITY = 0.75;
 const GOLD_14K_PURITY = 0.585;
 
+// Fixed singleton row ID
+const SINGLETON_ID = '00000000-0000-0000-0000-000000000001';
+
 async function fetchGoldApi(symbol: 'XAU' | 'XAG') {
   const res = await fetch(`https://www.goldapi.io/api/${symbol}/USD`, {
     headers: {
@@ -16,8 +19,6 @@ async function fetchGoldApi(symbol: 'XAU' | 'XAG') {
   });
 
   const json = await res.json();
-
-  console.log(`GoldAPI ${symbol} raw response:`, json);
 
   if (!res.ok) {
     throw new Error(
@@ -29,7 +30,6 @@ async function fetchGoldApi(symbol: 'XAU' | 'XAG') {
 }
 
 export async function updateMetalPrices() {
-  // IMPORTANT: create Supabase client at runtime
   const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -38,9 +38,6 @@ export async function updateMetalPrices() {
   // 1. Fetch spot prices (USD / troy oz)
   const goldData = await fetchGoldApi('XAU');
   const silverData = await fetchGoldApi('XAG');
-
-  console.log('Parsed gold data:', goldData);
-  console.log('Parsed silver data:', silverData);
 
   const goldUsdPerOz = goldData.price;
   const silverUsdPerOz = silverData.price;
@@ -63,23 +60,20 @@ export async function updateMetalPrices() {
   const gold18k = goldPhpPerGram24k * GOLD_18K_PURITY;
   const gold14k = goldPhpPerGram24k * GOLD_14K_PURITY;
 
-  console.log('Computed prices (PHP):', {
-    gold_14k: gold14k,
-    gold_18k: gold18k,
-    silver: silverPhpPerGram,
-  });
-
-  // 5. Update Supabase (singleton row)
-  const { error } = await supabase.from('current_currency_prices').update({
-    gold_14k: gold14k,
-    gold_18k: gold18k,
-    silver: silverPhpPerGram,
-    updated_at: new Date().toISOString(),
-  });
+  // 5. UPSERT singleton row
+  const { error } = await supabase.from('current_currency_prices').upsert(
+    {
+      id: SINGLETON_ID,
+      gold_14k: gold14k,
+      gold_18k: gold18k,
+      silver: silverPhpPerGram,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'id' }
+  );
 
   if (error) {
-    console.error('Supabase update error:', error);
-    throw new Error(JSON.stringify(error));
+    throw error;
   }
 
   return {
