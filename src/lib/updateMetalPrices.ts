@@ -1,10 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 const GOLDAPI_KEY = process.env.GOLDAPI_KEY!;
 const USD_TO_PHP = Number(process.env.USD_TO_PHP_RATE || 55);
 
@@ -20,20 +15,41 @@ async function fetchGoldApi(symbol: 'XAU' | 'XAG') {
     },
   });
 
+  const json = await res.json();
+
+  console.log(`GoldAPI ${symbol} raw response:`, json);
+
   if (!res.ok) {
-    throw new Error(`GoldAPI request failed for ${symbol}`);
+    throw new Error(
+      `GoldAPI request failed for ${symbol}: ${JSON.stringify(json)}`
+    );
   }
 
-  return res.json();
+  return json;
 }
 
 export async function updateMetalPrices() {
+  // IMPORTANT: create Supabase client at runtime
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   // 1. Fetch spot prices (USD / troy oz)
   const goldData = await fetchGoldApi('XAU');
   const silverData = await fetchGoldApi('XAG');
 
+  console.log('Parsed gold data:', goldData);
+  console.log('Parsed silver data:', silverData);
+
   const goldUsdPerOz = goldData.price;
   const silverUsdPerOz = silverData.price;
+
+  if (typeof goldUsdPerOz !== 'number' || typeof silverUsdPerOz !== 'number') {
+    throw new Error(
+      `Invalid price data: gold=${goldUsdPerOz}, silver=${silverUsdPerOz}`
+    );
+  }
 
   // 2. Convert to USD / gram
   const goldUsdPerGram = goldUsdPerOz / TROY_OUNCE_TO_GRAMS;
@@ -47,6 +63,12 @@ export async function updateMetalPrices() {
   const gold18k = goldPhpPerGram24k * GOLD_18K_PURITY;
   const gold14k = goldPhpPerGram24k * GOLD_14K_PURITY;
 
+  console.log('Computed prices (PHP):', {
+    gold_14k: gold14k,
+    gold_18k: gold18k,
+    silver: silverPhpPerGram,
+  });
+
   // 5. Update Supabase (singleton row)
   const { error } = await supabase.from('current_currency_prices').update({
     gold_14k: gold14k,
@@ -56,7 +78,8 @@ export async function updateMetalPrices() {
   });
 
   if (error) {
-    throw error;
+    console.error('Supabase update error:', error);
+    throw new Error(JSON.stringify(error));
   }
 
   return {
