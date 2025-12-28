@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
 const GOLDAPI_KEY = process.env.GOLDAPI_KEY!;
-const USD_TO_PHP = Number(process.env.USD_TO_PHP_RATE || 55);
 
 // Constants
 const TROY_OUNCE_TO_GRAMS = 31.1035;
@@ -10,6 +9,10 @@ const GOLD_14K_PURITY = 0.585;
 
 // Fixed singleton row ID
 const SINGLETON_ID = '00000000-0000-0000-0000-000000000001';
+
+/* -------------------------
+   External fetch helpers
+-------------------------- */
 
 async function fetchGoldApi(symbol: 'XAU' | 'XAG') {
   const res = await fetch(`https://www.goldapi.io/api/${symbol}/USD`, {
@@ -29,13 +32,39 @@ async function fetchGoldApi(symbol: 'XAU' | 'XAG') {
   return json;
 }
 
+async function fetchUsdToPhpRate(): Promise<number> {
+  const res = await fetch(
+    'https://api.exchangerate.host/latest?base=USD&symbols=PHP'
+  );
+
+  if (!res.ok) {
+    throw new Error('Failed to fetch USD→PHP exchange rate');
+  }
+
+  const json = await res.json();
+  const rate = json?.rates?.PHP;
+
+  if (typeof rate !== 'number') {
+    throw new Error('Invalid USD→PHP exchange rate');
+  }
+
+  return rate;
+}
+
+/* -------------------------
+   Main updater
+-------------------------- */
+
 export async function updateMetalPrices() {
   const supabase = createClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  // 1. Fetch spot prices (USD / troy oz)
+  // 1. Fetch FX rate (USD → PHP)
+  const USD_TO_PHP = await fetchUsdToPhpRate();
+
+  // 2. Fetch spot prices (USD / troy oz)
   const goldData = await fetchGoldApi('XAU');
   const silverData = await fetchGoldApi('XAG');
 
@@ -48,19 +77,19 @@ export async function updateMetalPrices() {
     );
   }
 
-  // 2. Convert to USD / gram
+  // 3. Convert to USD / gram
   const goldUsdPerGram = goldUsdPerOz / TROY_OUNCE_TO_GRAMS;
   const silverUsdPerGram = silverUsdPerOz / TROY_OUNCE_TO_GRAMS;
 
-  // 3. Convert to PHP
+  // 4. Convert to PHP
   const goldPhpPerGram24k = goldUsdPerGram * USD_TO_PHP;
   const silverPhpPerGram = silverUsdPerGram * USD_TO_PHP;
 
-  // 4. Apply karat purity
+  // 5. Apply karat purity
   const gold18k = goldPhpPerGram24k * GOLD_18K_PURITY;
   const gold14k = goldPhpPerGram24k * GOLD_14K_PURITY;
 
-  // 5. UPSERT singleton row
+  // 6. UPSERT singleton row
   const { error } = await supabase.from('current_currency_prices').upsert(
     {
       id: SINGLETON_ID,
