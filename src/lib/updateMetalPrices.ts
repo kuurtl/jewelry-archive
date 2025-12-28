@@ -33,9 +33,7 @@ async function fetchGoldApi(symbol: 'XAU' | 'XAG') {
 }
 
 async function fetchUsdToPhpRate(): Promise<number> {
-  const res = await fetch(
-    'https://api.exchangerate.host/latest?base=USD&symbols=PHP'
-  );
+  const res = await fetch('https://api.frankfurter.app/latest?from=USD&to=PHP');
 
   if (!res.ok) {
     throw new Error('Failed to fetch USD→PHP exchange rate');
@@ -45,7 +43,9 @@ async function fetchUsdToPhpRate(): Promise<number> {
   const rate = json?.rates?.PHP;
 
   if (typeof rate !== 'number') {
-    throw new Error('Invalid USD→PHP exchange rate');
+    throw new Error(
+      `Invalid USD→PHP exchange rate payload: ${JSON.stringify(json)}`
+    );
   }
 
   return rate;
