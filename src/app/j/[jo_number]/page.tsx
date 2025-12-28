@@ -13,6 +13,7 @@ type MetalPrices = {
   gold_14k: number;
   gold_18k: number;
   silver: number;
+  usd_to_php: number;
   updated_at: string;
 };
 
@@ -23,7 +24,7 @@ type PageProps = {
 };
 
 export default async function JewelryDetailPage({ params }: PageProps) {
-  // ✅ Explicitly unwrap params (required in modern Next.js)
+  // Explicitly unwrap params
   const { jo_number } = await params;
 
   const supabase = createSupabaseServerClient();
@@ -46,11 +47,11 @@ export default async function JewelryDetailPage({ params }: PageProps) {
   // ------------------------------
   const { data: prices, error: priceError } = await supabase
     .from('current_currency_prices')
-    .select('gold_14k, gold_18k, silver, updated_at')
+    .select('gold_14k, gold_18k, silver, usd_to_php, updated_at')
     .single();
 
-  if (priceError || !prices) {
-    throw new Error('Failed to load current currency prices');
+  if (priceError || !prices || prices.usd_to_php == null) {
+    throw new Error('Currency prices not initialized');
   }
 
   return (
