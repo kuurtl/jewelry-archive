@@ -97,6 +97,7 @@ export async function updateMetalPrices() {
       gold_18k: gold18k,
       silver: silverPhpPerGram,
       updated_at: new Date().toISOString(),
+      usd_to_php: USD_TO_PHP,
     },
     { onConflict: 'id' }
   );

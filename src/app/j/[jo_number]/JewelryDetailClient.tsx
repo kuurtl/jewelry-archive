@@ -40,6 +40,7 @@ type MetalPrices = {
   gold_14k: number;
   gold_18k: number;
   silver: number;
+  usd_to_php: number;
   updated_at: string;
 };
 
@@ -63,12 +64,14 @@ const METAL_LABELS: Record<MetalKey, string> = {
 function MetalPanel({
   label,
   price,
+  fxRate,
   updatedAt,
   weights,
   setWeights,
 }: {
   label: string;
   price: number;
+  fxRate: number;
   updatedAt: string;
   weights: number[];
   setWeights: (w: number[]) => void;
@@ -102,7 +105,8 @@ function MetalPanel({
       <div style={{ fontWeight: 600 }}>{label}</div>
 
       <div style={{ fontSize: 13, opacity: 0.7, marginTop: -4 }}>
-        Current Price: {pesoFormatter.format(price)}/g
+        Current Price: {pesoFormatter.format(price)}/g | 1 USD = ₱
+        {fxRate.toFixed(2)}
         <br />
         as of {readableDateTime(updatedAt)}
       </div>
@@ -333,13 +337,14 @@ export default function JewelryDetailClient({
                 textAlign: 'center',
               }}
             >
-              Updated Cost Calculator
+              UPDATED COST CALCULATOR
             </h2>
 
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <MetalPanel
                 label={METAL_LABELS['14k']}
                 price={METAL_PRICES['14k']}
+                fxRate={prices.usd_to_php}
                 updatedAt={prices.updated_at}
                 weights={weights14k}
                 setWeights={setWeights14k}
@@ -347,6 +352,7 @@ export default function JewelryDetailClient({
               <MetalPanel
                 label={METAL_LABELS['18k']}
                 price={METAL_PRICES['18k']}
+                fxRate={prices.usd_to_php}
                 updatedAt={prices.updated_at}
                 weights={weights18k}
                 setWeights={setWeights18k}
@@ -354,6 +360,7 @@ export default function JewelryDetailClient({
               <MetalPanel
                 label={METAL_LABELS.silver}
                 price={METAL_PRICES.silver}
+                fxRate={prices.usd_to_php}
                 updatedAt={prices.updated_at}
                 weights={weightsSilver}
                 setWeights={setWeightsSilver}
