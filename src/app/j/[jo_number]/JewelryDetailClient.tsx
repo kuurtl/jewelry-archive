@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 
@@ -13,7 +13,7 @@ const supabase = createClient(
 );
 
 /* -------------------------
-   Currency formatter
+   Formatters
 -------------------------- */
 const pesoFormatter = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -22,9 +22,6 @@ const pesoFormatter = new Intl.NumberFormat('en-PH', {
   maximumFractionDigits: 2,
 });
 
-/* -------------------------
-   Readable datetime
--------------------------- */
 const readableDateTime = (iso: string) =>
   new Date(iso)
     .toLocaleString('en-US', {
@@ -66,7 +63,14 @@ const METAL_LABELS: Record<MetalKey, string> = {
 };
 
 /* -------------------------
-   Metal Panel
+   Focus glow (sharp)
+-------------------------- */
+const focusGlow = {
+  boxShadow: '0 0 0 2px rgba(255,255,255,0.75)',
+};
+
+/* -------------------------
+   Metal Panel (unchanged)
 -------------------------- */
 function MetalPanel({
   label,
@@ -179,38 +183,115 @@ export default function JewelryDetailClient({
   record: JewelryRecord;
   prices: MetalPrices;
 }) {
+  /* ---------- canonical record (no prop mutation) ---------- */
+  const [currentRecord, setCurrentRecord] = useState<JewelryRecord>(record);
+
+  /* ---------- edit state ---------- */
   const [showCalculator, setShowCalculator] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedNotes, setEditedNotes] = useState(record.notes ?? '');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  /* ---------- editable fields ---------- */
+  const [itemName, setItemName] = useState(currentRecord.item_name ?? '');
+  const [classification, setClassification] = useState(
+    currentRecord.classification ?? ''
+  );
+  const [componentsText, setComponentsText] = useState(
+    JSON.stringify(currentRecord.jewelry_components, null, 2)
+  );
+  const [notes, setNotes] = useState(currentRecord.notes ?? '');
+
+  /* ---------- classification options ---------- */
+  const [classificationOptions, setClassificationOptions] = useState<string[]>(
+    []
+  );
+
+  useEffect(() => {
+    supabase
+      .from('jewelry_archive')
+      .select('classification')
+      .then(({ data }) => {
+        if (!data) return;
+
+        const unique = Array.from(
+          new Set(
+            data.map((d) => d.classification).filter((c): c is string => !!c)
+          )
+        );
+
+        setClassificationOptions(unique);
+      });
+  }, []);
+
+  async function saveAll() {
+    setSaving(true);
+
+    let parsedComponents: Record<string, unknown>;
+    try {
+      parsedComponents = JSON.parse(componentsText);
+    } catch {
+      alert('Jewelry Components must be valid JSON.');
+      setSaving(false);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('jewelry_archive')
+      .update({
+        item_name: itemName,
+        classification,
+        jewelry_components: parsedComponents,
+        notes,
+      })
+      .eq('jo_number', currentRecord.jo_number);
+
+    setSaving(false);
+
+    if (error) {
+      alert('Failed to save');
+      return;
+    }
+
+    // update UI immediately (no refetch)
+    setCurrentRecord({
+      ...currentRecord,
+      item_name: itemName,
+      classification,
+      jewelry_components: parsedComponents,
+      notes,
+    });
+
+    setIsEditing(false);
+    setFocusedField(null);
+  }
+
+  function cancelEdit() {
+    setItemName(currentRecord.item_name ?? '');
+    setClassification(currentRecord.classification ?? '');
+    setComponentsText(
+      JSON.stringify(currentRecord.jewelry_components, null, 2)
+    );
+    setNotes(currentRecord.notes ?? '');
+    setIsEditing(false);
+    setFocusedField(null);
+  }
+
+  /* -------------------------
+     Calculator state
+  -------------------------- */
   const [weights14k, setWeights14k] = useState<number[]>([]);
   const [weights18k, setWeights18k] = useState<number[]>([]);
   const [weightsSilver, setWeightsSilver] = useState<number[]>([]);
 
-  const METAL_PRICES: Record<MetalKey, number> = {
-    '14k': prices.gold_14k,
-    '18k': prices.gold_18k,
-    silver: prices.silver,
-  };
-
-  async function saveNotes() {
-    setSaving(true);
-
-    const { error } = await supabase
-      .from('jewelry_archive')
-      .update({ notes: editedNotes })
-      .eq('jo_number', record.jo_number);
-
-    setSaving(false);
-
-    if (!error) {
-      record.notes = editedNotes; // reflect immediately
-      setIsEditing(false);
-    } else {
-      alert('Failed to save notes');
-    }
-  }
+  const METAL_PRICES = useMemo(
+    () => ({
+      '14k': prices.gold_14k,
+      '18k': prices.gold_18k,
+      silver: prices.silver,
+    }),
+    [prices.gold_14k, prices.gold_18k, prices.silver]
+  );
 
   const breakdown = useMemo(() => {
     const calc = (weights: number[], price: number) =>
@@ -283,35 +364,133 @@ export default function JewelryDetailClient({
         >
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 600 }}>
-              {record.jo_number}
+              {currentRecord.jo_number}
             </h1>
-            <div style={{ marginTop: 8, opacity: 0.85 }}>
-              {record.item_name ?? '(no name)'}
-            </div>
-            <div style={{ marginTop: 4, fontSize: 14 }}>
-              Classification:{' '}
-              <strong>{record.classification ?? 'Unclassified'}</strong>
-            </div>
+
+            {/* ITEM NAME */}
+            {!isEditing ? (
+              <div style={{ marginTop: 8, opacity: 0.85 }}>
+                {currentRecord.item_name ?? '(no name)'}
+              </div>
+            ) : (
+              <input
+                value={itemName}
+                onChange={(e) => setItemName(e.target.value)}
+                tabIndex={isEditing ? 0 : -1}
+                onFocus={() => {
+                  if (isEditing) setFocusedField('item_name');
+                }}
+                onBlur={() => {
+                  if (isEditing) setFocusedField(null);
+                }}
+                style={{
+                  marginTop: 8,
+                  padding: 10,
+                  background: '#0b0b0b',
+                  color: '#fff',
+                  borderRadius: 8,
+                  border: '1px solid #555',
+                  outline: 'none',
+                  width: '100%',
+                  ...(isEditing && focusedField === 'item_name'
+                    ? focusGlow
+                    : {}),
+                }}
+              />
+            )}
+
+            {/* CLASSIFICATION */}
+            {!isEditing ? (
+              <div style={{ marginTop: 4, fontSize: 14 }}>
+                Classification:{' '}
+                <strong>
+                  {currentRecord.classification ?? 'Unclassified'}
+                </strong>
+              </div>
+            ) : (
+              <div style={{ marginTop: 4, fontSize: 14 }}>
+                Classification:{' '}
+                <select
+                  value={classification}
+                  onChange={(e) => setClassification(e.target.value)}
+                  tabIndex={isEditing ? 0 : -1}
+                  onFocus={() => {
+                    if (isEditing) setFocusedField('classification');
+                  }}
+                  onBlur={() => {
+                    if (isEditing) setFocusedField(null);
+                  }}
+                  style={{
+                    marginLeft: 8,
+                    padding: 8,
+                    background: '#0b0b0b',
+                    color: '#fff',
+                    borderRadius: 8,
+                    border: '1px solid #555',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    ...(isEditing && focusedField === 'classification'
+                      ? focusGlow
+                      : {}),
+                  }}
+                >
+                  {classificationOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={() => {
-              if (isEditing) {
-                setEditedNotes(record.notes ?? '');
-              }
-              setIsEditing(!isEditing);
-            }}
-            style={{
-              padding: '16px 28px',
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.4)',
-              background: '#0b0b0b',
-              color: '#fff',
-              cursor: 'pointer',
-            }}
-          >
-            {isEditing ? 'Cancel' : 'Edit'}
-          </button>
+          {!isEditing ? (
+            <button
+              onClick={() => setIsEditing(true)}
+              style={{
+                padding: '16px 28px',
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.4)',
+                background: '#0b0b0b',
+                color: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              Edit
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={saveAll}
+                disabled={saving}
+                style={{
+                  padding: '16px 28px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(255,255,255,0.4)',
+                  background: '#0b0b0b',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+
+              <button
+                onClick={cancelEdit}
+                style={{
+                  padding: '16px 28px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(255,255,255,0.4)',
+                  background: '#0b0b0b',
+                  color: '#fff',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
 
         {/* IMAGE + NOTES */}
@@ -332,9 +511,25 @@ export default function JewelryDetailClient({
               alignItems: 'center',
               justifyContent: 'center',
               color: '#777',
+              position: 'relative',
             }}
           >
             Upload Image
+            {isEditing && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 12,
+                  left: 0,
+                  right: 0,
+                  textAlign: 'center',
+                  fontSize: 13,
+                  opacity: 0.8,
+                }}
+              >
+                Reupload photo
+              </div>
+            )}
           </div>
 
           <div
@@ -351,44 +546,30 @@ export default function JewelryDetailClient({
             <div style={{ fontSize: 13, opacity: 0.8 }}>Notes</div>
 
             <textarea
-              value={isEditing ? editedNotes : record.notes ?? ''}
-              onChange={(e) => setEditedNotes(e.target.value)}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
               readOnly={!isEditing}
+              tabIndex={isEditing ? 0 : -1}
+              onFocus={() => {
+                if (isEditing) setFocusedField('notes');
+              }}
+              onBlur={() => {
+                if (isEditing) setFocusedField(null);
+              }}
               style={{
                 flex: 1,
                 resize: 'none',
                 backgroundColor: '#0b0b0b',
-                border: '1px solid #333',
+                border: isEditing ? '1px solid #333' : 'none',
                 borderRadius: 12,
                 padding: 12,
                 color: '#fff',
                 fontSize: 14,
                 cursor: isEditing ? 'text' : 'default',
-
-                // 👇 key part
-                outline: isEditing ? undefined : 'none',
-                boxShadow: isEditing ? undefined : 'none',
+                outline: 'none',
+                ...(isEditing && focusedField === 'notes' ? focusGlow : {}),
               }}
             />
-
-            {isEditing && (
-              <button
-                onClick={saveNotes}
-                disabled={saving}
-                style={{
-                  alignSelf: 'flex-end',
-                  padding: '10px 18px',
-                  borderRadius: 10,
-                  border: '1px solid rgba(255,255,255,0.4)',
-                  background: '#0b0b0b',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  opacity: saving ? 0.6 : 1,
-                }}
-              >
-                {saving ? 'Saving…' : 'Save Notes'}
-              </button>
-            )}
           </div>
         </div>
 
@@ -403,19 +584,50 @@ export default function JewelryDetailClient({
         >
           <h2 style={{ fontSize: 24, fontWeight: 600 }}>Jewelry Components</h2>
 
-          <pre
-            style={{
-              marginTop: 16,
-              padding: 16,
-              background: '#0b0b0b',
-              borderRadius: 8,
-              fontSize: 13,
-              fontFamily: 'monospace',
-              overflowX: 'auto',
-            }}
-          >
-            {JSON.stringify(record.jewelry_components, null, 2)}
-          </pre>
+          {!isEditing ? (
+            <pre
+              style={{
+                marginTop: 16,
+                padding: 16,
+                background: '#0b0b0b',
+                borderRadius: 8,
+                fontSize: 13,
+                fontFamily: 'monospace',
+                overflowX: 'auto',
+              }}
+            >
+              {JSON.stringify(currentRecord.jewelry_components, null, 2)}
+            </pre>
+          ) : (
+            <textarea
+              value={componentsText}
+              onChange={(e) => setComponentsText(e.target.value)}
+              tabIndex={isEditing ? 0 : -1}
+              onFocus={() => {
+                if (isEditing) setFocusedField('components');
+              }}
+              onBlur={() => {
+                if (isEditing) setFocusedField(null);
+              }}
+              style={{
+                marginTop: 16,
+                padding: 16,
+                background: '#0b0b0b',
+                borderRadius: 8,
+                fontSize: 13,
+                fontFamily: 'monospace',
+                overflowX: 'auto',
+                width: '100%',
+                minHeight: 260,
+                resize: 'vertical',
+                border: '1px solid #555',
+                outline: 'none',
+                ...(isEditing && focusedField === 'components'
+                  ? focusGlow
+                  : {}),
+              }}
+            />
+          )}
         </div>
 
         {/* CALCULATOR TOGGLE */}
@@ -460,7 +672,7 @@ export default function JewelryDetailClient({
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
               <MetalPanel
                 label={METAL_LABELS['14k']}
-                price={METAL_PRICES['14k']}
+                price={prices.gold_14k}
                 fxRate={prices.usd_to_php}
                 updatedAt={prices.updated_at}
                 weights={weights14k}
@@ -468,7 +680,7 @@ export default function JewelryDetailClient({
               />
               <MetalPanel
                 label={METAL_LABELS['18k']}
-                price={METAL_PRICES['18k']}
+                price={prices.gold_18k}
                 fxRate={prices.usd_to_php}
                 updatedAt={prices.updated_at}
                 weights={weights18k}
@@ -476,7 +688,7 @@ export default function JewelryDetailClient({
               />
               <MetalPanel
                 label={METAL_LABELS.silver}
-                price={METAL_PRICES.silver}
+                price={prices.silver}
                 fxRate={prices.usd_to_php}
                 updatedAt={prices.updated_at}
                 weights={weightsSilver}
