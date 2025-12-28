@@ -1,33 +1,7 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-
-/* -------------------------
-   Currency formatter (FAST, native)
--------------------------- */
-const pesoFormatter = new Intl.NumberFormat('en-PH', {
-  style: 'currency',
-  currency: 'PHP',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-/* -------------------------
-   Readable datetime formatter
--------------------------- */
-const readableDateTime = (iso: string) =>
-  new Date(iso)
-    .toLocaleString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-    })
-    .replace(',', ' –');
 
 type JewelryRecord = {
   jo_number: string;
@@ -43,118 +17,32 @@ type MetalPrices = {
   updated_at: string;
 };
 
-type MetalKey = '14k' | '18k' | 'silver';
+// ✅ CANONICAL INTERNAL KEYS
+type MetalKey = 'gold_14k' | 'gold_18k' | 'silver';
 
-/* -------------------------
-   Metal Panel
--------------------------- */
-function MetalPanel({
-  label,
-  price,
-  updatedAt,
-  weights,
-  setWeights,
-}: {
-  label: string;
-  price: number;
-  updatedAt: string;
-  weights: number[];
-  setWeights: (w: number[]) => void;
-}) {
-  function addRow() {
-    setWeights([...weights, 0]);
-  }
+// ✅ DISPLAY LABELS (HUMAN)
+const METAL_LABELS: Record<MetalKey, string> = {
+  gold_14k: '14k GOLD',
+  gold_18k: '18k GOLD',
+  silver: 'SILVER',
+};
 
-  function updateRow(index: number, value: string) {
-    const num = parseFloat(value) || 0;
-    setWeights(weights.map((w, i) => (i === index ? num : w)));
-  }
+const pesoFormatter = new Intl.NumberFormat('en-PH', {
+  style: 'currency',
+  currency: 'PHP',
+});
 
-  function removeRow(index: number) {
-    setWeights(weights.filter((_, i) => i !== index));
-  }
+const readableDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  });
 
-  return (
-    <div
-      style={{
-        border: '1px solid rgba(255,255,255,0.22)',
-        borderRadius: 16,
-        padding: 16,
-        backgroundColor: '#111',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-        flex: '1 1 300px',
-      }}
-    >
-      <div style={{ fontWeight: 600 }}>{label}</div>
-
-      <div
-        style={{
-          fontSize: 13,
-          opacity: 0.7,
-          marginTop: -4,
-        }}
-      >
-        Current Price: {pesoFormatter.format(price)}/g
-        <br />
-        as of {readableDateTime(updatedAt)}
-      </div>
-
-      <button
-        onClick={addRow}
-        style={{
-          alignSelf: 'flex-start',
-          padding: '6px 12px',
-          borderRadius: 8,
-          border: '1px solid rgba(255,255,255,0.4)',
-          background: '#0b0b0b',
-          color: '#fff',
-          cursor: 'pointer',
-        }}
-      >
-        + Add piece
-      </button>
-
-      {weights.map((w, i) => (
-        <div key={i} style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="number"
-            step="0.01"
-            value={w || ''}
-            onChange={(e) => updateRow(i, e.target.value)}
-            placeholder="Weight (g)"
-            style={{
-              flex: 1,
-              padding: 8,
-              borderRadius: 6,
-              border: '1px solid #555',
-              backgroundColor: '#0b0b0b',
-              color: '#fff',
-            }}
-          />
-          <button
-            onClick={() => removeRow(i)}
-            style={{
-              padding: '6px 10px',
-              borderRadius: 6,
-              border: '1px solid rgba(255,255,255,0.4)',
-              background: '#0b0b0b',
-              color: '#fff',
-              cursor: 'pointer',
-            }}
-          >
-            −
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* -------------------------
-   Product Page Client
--------------------------- */
 export default function JewelryDetailClient({
   record,
   prices,
@@ -168,9 +56,16 @@ export default function JewelryDetailClient({
   const [weights18k, setWeights18k] = useState<number[]>([]);
   const [weightsSilver, setWeightsSilver] = useState<number[]>([]);
 
-  const METAL_PRICES = {
-    '14k': prices.gold_14k,
-    '18k': prices.gold_18k,
+  const resetCalculator = () => {
+    setWeights14k([]);
+    setWeights18k([]);
+    setWeightsSilver([]);
+  };
+
+  // ✅ PRICE MAP (MACHINE)
+  const METAL_PRICES: Record<MetalKey, number> = {
+    gold_14k: prices.gold_14k,
+    gold_18k: prices.gold_18k,
     silver: prices.silver,
   };
 
@@ -182,231 +77,139 @@ export default function JewelryDetailClient({
       }));
 
     return {
-      '14k': calc(weights14k, METAL_PRICES['14k']),
-      '18k': calc(weights18k, METAL_PRICES['18k']),
+      gold_14k: calc(weights14k, METAL_PRICES.gold_14k),
+      gold_18k: calc(weights18k, METAL_PRICES.gold_18k),
       silver: calc(weightsSilver, METAL_PRICES.silver),
     };
   }, [weights14k, weights18k, weightsSilver, METAL_PRICES]);
 
-  function resetCalculator() {
-    setWeights14k([]);
-    setWeights18k([]);
-    setWeightsSilver([]);
-  }
-
-  const total = useMemo(() => {
-    return Object.values(breakdown)
-      .flat()
-      .reduce((sum, r) => sum + r.subtotal, 0);
-  }, [breakdown]);
+  const total = Object.values(breakdown)
+    .flat()
+    .reduce((sum, row) => sum + row.subtotal, 0);
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        background: '#0b0b0b',
-        padding: '24px 0',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1600,
-          margin: '0 auto',
-          padding: '0 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 24,
-        }}
-      >
-        {/* BACK TO ARCHIVE (TEXT LINK) */}
-        <div style={{ marginBottom: 4 }}>
-          <Link
-            href="/"
-            style={{
-              alignSelf: 'flex-start',
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: 14,
-              fontWeight: 400,
-              textDecoration: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            ← Back to archive
-          </Link>
-        </div>
-
-        {/* PRODUCT INFO */}
-        <div
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: 16 }}>
+      {/* BACK LINK */}
+      <div style={{ marginBottom: 4 }}>
+        <Link
+          href="/"
           style={{
-            border: '1px solid rgba(255,255,255,0.22)',
-            borderRadius: 16,
-            padding: 20,
-            background: '#111',
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: 14,
+            fontWeight: 400,
+            textDecoration: 'none',
           }}
         >
-          <h1 style={{ fontSize: 24, fontWeight: 600 }}>
-            JO {record.jo_number}
-          </h1>
+          ← Back to archive
+        </Link>
+      </div>
 
-          <div style={{ marginTop: 8, opacity: 0.85 }}>
-            {record.item_name ?? '(no name)'}
+      {/* JO PANEL */}
+      <div className="panel">
+        <strong>JO Number:</strong> {record.jo_number}
+        {record.item_name && (
+          <div>
+            <strong>Item:</strong> {record.item_name}
           </div>
-
-          <div style={{ marginTop: 4, fontSize: 14 }}>
-            Classification:{' '}
-            <strong>{record.classification ?? 'Unclassified'}</strong>
-          </div>
-        </div>
-
-        {/* JEWELRY COMPONENTS */}
-        <div
-          style={{
-            border: '1px solid rgba(255,255,255,0.22)',
-            borderRadius: 16,
-            padding: 20,
-            background: '#111',
-          }}
-        >
-          <h2 style={{ fontSize: 24, fontWeight: 600 }}>
-            Jewelry Components
-          </h2>
-
-          <pre
-            style={{
-              marginTop: 16,
-              padding: 16,
-              background: '#0b0b0b',
-              color: '#fff',
-              borderRadius: 8,
-              fontSize: 13,
-              fontFamily: 'monospace',
-              overflowX: 'auto',
-            }}
-          >
-            {JSON.stringify(record.jewelry_components, null, 2)}
-          </pre>
-        </div>
-
-        {/* TOGGLE BUTTON */}
-        <button
-          onClick={() => {
-            if (showCalculator) resetCalculator();
-            setShowCalculator((v) => !v);
-          }}
-          style={{
-            alignSelf: 'flex-start',
-            padding: '10px 16px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.4)',
-            background: '#141414',
-            color: '#fff',
-            fontSize: 16,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {showCalculator
-            ? 'Hide Updated Cost Calculator'
-            : 'Show Updated Cost Calculator'}
-        </button>
-
-        {/* COST CALCULATOR PANEL */}
-        {showCalculator && (
-          <div
-            style={{
-              border: '1px solid rgba(255,255,255,0.22)',
-              borderRadius: 16,
-              padding: 20,
-              background: '#111',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 24,
-              fontFamily: 'monospace',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 24,
-                fontWeight: 600,
-                textAlign: 'center',
-              }}
-            >
-              Updated Cost Calculator
-            </h2>
-
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <MetalPanel
-                label="14k Gold"
-                price={METAL_PRICES['14k']}
-                updatedAt={prices.updated_at}
-                weights={weights14k}
-                setWeights={setWeights14k}
-              />
-              <MetalPanel
-                label="18k Gold"
-                price={METAL_PRICES['18k']}
-                updatedAt={prices.updated_at}
-                weights={weights18k}
-                setWeights={setWeights18k}
-              />
-              <MetalPanel
-                label="Silver"
-                price={METAL_PRICES.silver}
-                updatedAt={prices.updated_at}
-                weights={weightsSilver}
-                setWeights={setWeightsSilver}
-              />
-            </div>
-
-            {/* BREAKDOWN */}
-            <h3
-              style={{
-                textAlign: 'center',
-                fontSize: 16,
-                fontWeight: 600,
-              }}
-            >
-              PRICE BREAKDOWN
-            </h3>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: 16,
-                flexWrap: 'wrap',
-                fontSize: 13,
-              }}
-            >
-              {Object.entries(breakdown).map(([metal, rows]) => (
-                <div key={metal} style={{ flex: '1 1 300px' }}>
-                  <strong>{metal.toUpperCase()}</strong>
-                  {rows.map((r, i) => (
-                    <div key={i}>
-                      {r.weight}g ×{' '}
-                      {pesoFormatter.format(
-                        METAL_PRICES[metal as MetalKey]
-                      )}{' '}
-                      = {pesoFormatter.format(r.subtotal)}
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-
-            {/* FINAL COST */}
-            <hr />
-            <div
-              style={{
-                fontSize: 28,
-                fontWeight: 700,
-                marginTop: 8,
-              }}
-            >
-              Final Updated Cost: {pesoFormatter.format(total)}
-            </div>
+        )}
+        {record.classification && (
+          <div>
+            <strong>Classification:</strong> {record.classification}
           </div>
         )}
       </div>
-    </main>
+
+      {/* COMPONENTS */}
+      <div className="panel">
+        <pre style={{ fontFamily: 'monospace', fontSize: 13 }}>
+          {JSON.stringify(record.jewelry_components, null, 2)}
+        </pre>
+      </div>
+
+      {/* TOGGLE */}
+      <button
+        onClick={() => {
+          if (showCalculator) resetCalculator();
+          setShowCalculator((v) => !v);
+        }}
+      >
+        {showCalculator
+          ? 'Hide Updated Cost Calculator'
+          : 'Show Updated Cost Calculator'}
+      </button>
+
+      {showCalculator && (
+        <div className="panel" style={{ fontFamily: 'monospace' }}>
+          <div style={{ marginBottom: 8 }}>
+            <strong>Current Prices</strong> <br />
+            14k GOLD: {pesoFormatter.format(prices.gold_14k)} <br />
+            18k GOLD: {pesoFormatter.format(prices.gold_18k)} <br />
+            SILVER: {pesoFormatter.format(prices.silver)} <br />
+            <span style={{ opacity: 0.7 }}>
+              as of {readableDateTime(prices.updated_at)}
+            </span>
+          </div>
+
+          {/* INPUTS */}
+          {(
+            [
+              ['gold_14k', weights14k, setWeights14k],
+              ['gold_18k', weights18k, setWeights18k],
+              ['silver', weightsSilver, setWeightsSilver],
+            ] as const
+          ).map(([key, weights, setter]) => (
+            <div key={key} style={{ marginBottom: 12 }}>
+              <strong>{METAL_LABELS[key]}</strong>
+              {weights.map((w, i) => (
+                <div key={i}>
+                  <input
+                    type="number"
+                    value={w}
+                    onChange={(e) => {
+                      const copy = [...weights];
+                      copy[i] = Number(e.target.value);
+                      setter(copy);
+                    }}
+                  />
+                  <button
+                    onClick={() =>
+                      setter(weights.filter((_, idx) => idx !== i))
+                    }
+                  >
+                    remove
+                  </button>
+                </div>
+              ))}
+              <button onClick={() => setter([...weights, 0])}>
+                add weight
+              </button>
+            </div>
+          ))}
+
+          {/* BREAKDOWN */}
+          <div>
+            <strong>Breakdown</strong>
+            {Object.entries(breakdown).map(([metal, rows]) => {
+              const key = metal as MetalKey;
+              return (
+                <div key={metal} style={{ marginTop: 8 }}>
+                  <strong>{METAL_LABELS[key]}</strong>
+                  {rows.map((r, i) => (
+                    <div key={i}>
+                      {r.weight}g × {pesoFormatter.format(METAL_PRICES[key])} ={' '}
+                      {pesoFormatter.format(r.subtotal)}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <strong>Total:</strong> {pesoFormatter.format(total)}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
