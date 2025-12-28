@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import imageCompression from 'browser-image-compression';
 
 /* -------------------------
    Supabase client
@@ -44,6 +45,7 @@ type JewelryRecord = {
   classification: string | null;
   jewelry_components: Record<string, unknown>;
   notes: string | null;
+  image_url?: string | null;
 };
 
 type MetalPrices = {
@@ -70,7 +72,7 @@ const focusGlow = {
 };
 
 /* -------------------------
-   Metal Panel (unchanged)
+   Metal Panel
 -------------------------- */
 function MetalPanel({
   label,
@@ -183,16 +185,13 @@ export default function JewelryDetailClient({
   record: JewelryRecord;
   prices: MetalPrices;
 }) {
-  /* ---------- canonical record (no prop mutation) ---------- */
   const [currentRecord, setCurrentRecord] = useState<JewelryRecord>(record);
 
-  /* ---------- edit state ---------- */
   const [showCalculator, setShowCalculator] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  /* ---------- editable fields ---------- */
   const [itemName, setItemName] = useState(currentRecord.item_name ?? '');
   const [classification, setClassification] = useState(
     currentRecord.classification ?? ''
@@ -202,7 +201,59 @@ export default function JewelryDetailClient({
   );
   const [notes, setNotes] = useState(currentRecord.notes ?? '');
 
-  /* ---------- classification options ---------- */
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageBust, setImageBust] = useState<number>(Date.now());
+
+  function getImageSrc() {
+    if (!currentRecord.image_url) return '/placeholder-jewelry.jpg';
+
+    const { data } = supabase.storage
+      .from('jewelry-images')
+      .getPublicUrl(currentRecord.image_url);
+
+    return `${data.publicUrl}?v=${imageBust}`;
+  }
+
+  async function handleSelectImage(file: File) {
+    setUploadingImage(true);
+
+    try {
+      const compressed = await imageCompression(file, {
+        maxWidthOrHeight: 900,
+        maxSizeMB: 0.3,
+        useWebWorker: true,
+        fileType: 'image/webp',
+        initialQuality: 0.7,
+      });
+
+      const path = `${currentRecord.jo_number}.webp`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('jewelry-images')
+        .upload(path, compressed, {
+          upsert: true,
+          contentType: 'image/webp',
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('jewelry_archive')
+        .update({ image_url: path })
+        .eq('jo_number', currentRecord.jo_number);
+
+      if (dbError) throw dbError;
+
+      setCurrentRecord((r) => ({ ...r, image_url: path }));
+      setImageBust(Date.now());
+    } catch (e) {
+      console.error(e);
+      alert('Image upload failed.');
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
   const [classificationOptions, setClassificationOptions] = useState<string[]>(
     []
   );
@@ -253,7 +304,6 @@ export default function JewelryDetailClient({
       return;
     }
 
-    // update UI immediately (no refetch)
     setCurrentRecord({
       ...currentRecord,
       item_name: itemName,
@@ -277,9 +327,6 @@ export default function JewelryDetailClient({
     setFocusedField(null);
   }
 
-  /* -------------------------
-     Calculator state
-  -------------------------- */
   const [weights14k, setWeights14k] = useState<number[]>([]);
   const [weights18k, setWeights18k] = useState<number[]>([]);
   const [weightsSilver, setWeightsSilver] = useState<number[]>([]);
@@ -506,29 +553,61 @@ export default function JewelryDetailClient({
               backgroundColor: '#111',
               borderRadius: 16,
               border: '1px solid rgba(255,255,255,0.22)',
-              minHeight: 220,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#777',
+              height: 'clamp(180px, 30vw, 260px)', // ✅ responsive fixed panel height
               position: 'relative',
+              overflow: 'hidden',
             }}
           >
-            Upload Image
+            <img
+              src={getImageSrc()}
+              alt={currentRecord.item_name ?? currentRecord.jo_number}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+
             {isEditing && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 12,
-                  left: 0,
-                  right: 0,
-                  textAlign: 'center',
-                  fontSize: 13,
-                  opacity: 0.8,
-                }}
-              >
-                Reupload photo
-              </div>
+              <>
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="imageUploadInput"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    handleSelectImage(f);
+                    e.currentTarget.value = '';
+                  }}
+                />
+
+                <label
+                  htmlFor="imageUploadInput"
+                  style={{
+                    position: 'absolute',
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(255,255,255,0.4)',
+                    background: '#0b0b0b',
+                    color: '#fff',
+                    cursor: uploadingImage ? 'default' : 'pointer',
+                    opacity: uploadingImage ? 0.6 : 1,
+                    textAlign: 'center',
+                    fontSize: 13,
+                    userSelect: 'none',
+                  }}
+                >
+                  {uploadingImage ? 'Uploading…' : 'Replace photo'}
+                </label>
+              </>
             )}
           </div>
 

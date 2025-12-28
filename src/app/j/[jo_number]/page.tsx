@@ -7,6 +7,7 @@ type JewelryRecord = {
   item_name: string | null;
   classification: string | null;
   notes: string | null;
+  image_url?: string | null;
   jewelry_components: Record<string, unknown>;
 };
 

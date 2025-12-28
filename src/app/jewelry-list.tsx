@@ -1,26 +1,40 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useQueryState } from '@/lib/query-context';
+import { supabaseClient } from '@/lib/supabaseClient';
 
 type JewelryListItem = {
   jo_number: string;
   item_name: string | null;
   classification: string | null;
   jewelry_components?: unknown;
+  image_url?: string | null;
 };
 
 export default function JewelryList({ items }: { items: JewelryListItem[] }) {
   const { searchText, classification, includeComponents } = useQueryState();
 
   /**
+   * Stable random seed per client mount.
+   * Lazy initializer allows Math.random safely.
+   */
+  const [shuffleSeed] = useState(() => Math.random());
+
+  /**
    * Randomize ONCE when items change.
-   * Prevents reshuffling on every keystroke.
+   * Deterministic via seed, no effects, no hydration mismatch.
    */
   const randomizedItems = useMemo(() => {
-    return [...items].sort(() => Math.random() - 0.5);
-  }, [items]);
+    const seededRandom = (i: number) => Math.abs(Math.sin(shuffleSeed + i)) % 1;
+
+    return [...items].sort((a, b) => {
+      const aVal = seededRandom(a.jo_number.length);
+      const bVal = seededRandom(b.jo_number.length);
+      return aVal - bVal;
+    });
+  }, [items, shuffleSeed]);
 
   /**
    * Apply filters to the already-randomized list.
@@ -29,14 +43,12 @@ export default function JewelryList({ items }: { items: JewelryListItem[] }) {
   const visibleItems = useMemo(() => {
     let filtered = randomizedItems;
 
-    // classification filter
     if (classification !== 'all') {
       filtered = filtered.filter(
         (item) => item.classification === classification
       );
     }
 
-    // text search (client-side)
     if (searchText.trim().length >= 2) {
       const q = searchText.toLowerCase();
 
@@ -52,9 +64,7 @@ export default function JewelryList({ items }: { items: JewelryListItem[] }) {
           ? ' ' + JSON.stringify(item.jewelry_components ?? {})
           : '';
 
-        const searchable = (baseText + componentText).toLowerCase();
-
-        return searchable.includes(q);
+        return (baseText + componentText).toLowerCase().includes(q);
       });
     }
 
@@ -63,28 +73,60 @@ export default function JewelryList({ items }: { items: JewelryListItem[] }) {
 
   return (
     <ul style={{ listStyle: 'none', padding: 0, marginTop: 16 }}>
-      {visibleItems.map((item) => (
-        <li
-          key={item.jo_number}
-          style={{
-            padding: '12px 0',
-            borderBottom: '1px solid #e5e7eb',
-          }}
-        >
-          <Link
-            href={`/j/${item.jo_number}`}
-            style={{ textDecoration: 'none', color: 'inherit' }}
+      {visibleItems.map((item) => {
+        const imageSrc = item.image_url
+          ? supabaseClient.storage
+              .from('jewelry-images')
+              .getPublicUrl(item.image_url).data.publicUrl
+          : '/placeholder-jewelry.jpg';
+
+        return (
+          <li
+            key={item.jo_number}
+            style={{
+              padding: '12px 0',
+              borderBottom: '1px solid #e5e7eb',
+            }}
           >
-            <div style={{ fontWeight: 600 }}>{item.jo_number}</div>
+            <Link
+              href={`/j/${item.jo_number}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <img
+                  src={imageSrc}
+                  alt={item.item_name ?? item.jo_number}
+                  width={56}
+                  height={56}
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: 8,
+                    objectFit: 'cover',
+                    flexShrink: 0,
+                    backgroundColor: '#111',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                  }}
+                />
 
-            <div>{item.item_name ?? '(no name)'}</div>
-
-            <div style={{ fontSize: 12, opacity: 0.7 }}>
-              {item.classification ?? 'Unclassified'}
-            </div>
-          </Link>
-        </li>
-      ))}
+                <div>
+                  <div style={{ fontWeight: 600 }}>{item.jo_number}</div>
+                  <div>{item.item_name ?? '(no name)'}</div>
+                  <div style={{ fontSize: 12, opacity: 0.7 }}>
+                    {item.classification ?? 'Unclassified'}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          </li>
+        );
+      })}
     </ul>
   );
 }

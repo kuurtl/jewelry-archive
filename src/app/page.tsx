@@ -8,7 +8,7 @@ export default async function HomePage() {
 
   const { data, error } = await supabase
     .from('jewelry_archive')
-    .select('jo_number, item_name, classification');
+    .select('jo_number, item_name, classification, image_url');
 
   if (error) {
     return <pre>{error.message}</pre>;
