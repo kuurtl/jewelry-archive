@@ -304,7 +304,7 @@ export default function JewelryDetailClient({
             padding: '10px 16px',
             borderRadius: 12,
             border: '1px solid rgba(255,255,255,0.4)',
-            background: '#141414',
+            background: '#111',
             color: '#fff',
             fontSize: 16,
             fontWeight: 600,
