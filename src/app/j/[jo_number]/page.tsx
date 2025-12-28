@@ -6,6 +6,7 @@ type JewelryRecord = {
   jo_number: string;
   item_name: string | null;
   classification: string | null;
+  notes: string | null;
   jewelry_components: Record<string, unknown>;
 };
 

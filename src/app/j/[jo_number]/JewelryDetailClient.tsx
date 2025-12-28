@@ -2,6 +2,15 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { createClient } from '@supabase/supabase-js';
+
+/* -------------------------
+   Supabase client
+-------------------------- */
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+);
 
 /* -------------------------
    Currency formatter
@@ -29,11 +38,15 @@ const readableDateTime = (iso: string) =>
     })
     .replace(',', ' –');
 
+/* -------------------------
+   Types
+-------------------------- */
 type JewelryRecord = {
   jo_number: string;
   item_name: string | null;
   classification: string | null;
   jewelry_components: Record<string, unknown>;
+  notes: string | null;
 };
 
 type MetalPrices = {
@@ -44,14 +57,8 @@ type MetalPrices = {
   updated_at: string;
 };
 
-/* -------------------------
-   INTERNAL METAL KEYS
--------------------------- */
 type MetalKey = '14k' | '18k' | 'silver';
 
-/* -------------------------
-   DISPLAY LABELS (EXPLICIT + UPPERCASE)
--------------------------- */
 const METAL_LABELS: Record<MetalKey, string> = {
   '14k': '14K GOLD',
   '18k': '18K GOLD',
@@ -104,7 +111,7 @@ function MetalPanel({
     >
       <div style={{ fontWeight: 600 }}>{label}</div>
 
-      <div style={{ fontSize: 13, opacity: 0.7, marginTop: -4 }}>
+      <div style={{ fontSize: 13, opacity: 0.7 }}>
         Current Price: {pesoFormatter.format(price)}/g | 1 USD = ₱
         {fxRate.toFixed(2)}
         <br />
@@ -163,7 +170,7 @@ function MetalPanel({
 }
 
 /* -------------------------
-   Product Page Client
+   Jewelry Detail Client
 -------------------------- */
 export default function JewelryDetailClient({
   record,
@@ -173,6 +180,9 @@ export default function JewelryDetailClient({
   prices: MetalPrices;
 }) {
   const [showCalculator, setShowCalculator] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedNotes, setEditedNotes] = useState(record.notes ?? '');
+  const [saving, setSaving] = useState(false);
 
   const [weights14k, setWeights14k] = useState<number[]>([]);
   const [weights18k, setWeights18k] = useState<number[]>([]);
@@ -183,6 +193,24 @@ export default function JewelryDetailClient({
     '18k': prices.gold_18k,
     silver: prices.silver,
   };
+
+  async function saveNotes() {
+    setSaving(true);
+
+    const { error } = await supabase
+      .from('jewelry_archive')
+      .update({ notes: editedNotes })
+      .eq('jo_number', record.jo_number);
+
+    setSaving(false);
+
+    if (!error) {
+      record.notes = editedNotes; // reflect immediately
+      setIsEditing(false);
+    } else {
+      alert('Failed to save notes');
+    }
+  }
 
   const breakdown = useMemo(() => {
     const calc = (weights: number[], price: number) =>
@@ -198,17 +226,19 @@ export default function JewelryDetailClient({
     };
   }, [weights14k, weights18k, weightsSilver, METAL_PRICES]);
 
+  const total = useMemo(
+    () =>
+      Object.values(breakdown)
+        .flat()
+        .reduce((sum, r) => sum + r.subtotal, 0),
+    [breakdown]
+  );
+
   function resetCalculator() {
     setWeights14k([]);
     setWeights18k([]);
     setWeightsSilver([]);
   }
-
-  const total = useMemo(() => {
-    return Object.values(breakdown)
-      .flat()
-      .reduce((sum, r) => sum + r.subtotal, 0);
-  }, [breakdown]);
 
   return (
     <main
@@ -228,41 +258,137 @@ export default function JewelryDetailClient({
           gap: 24,
         }}
       >
-        {/* BACK TO ARCHIVE */}
-        <div style={{ marginBottom: 4 }}>
-          <Link
-            href="/"
-            style={{
-              color: 'rgba(255,255,255,0.7)',
-              fontSize: 14,
-              fontWeight: 400,
-              textDecoration: 'none',
-            }}
-          >
-            ← Back to archive
-          </Link>
-        </div>
+        <Link
+          href="/"
+          style={{
+            color: 'rgba(255,255,255,0.7)',
+            fontSize: 14,
+            textDecoration: 'none',
+          }}
+        >
+          ← Back to archive
+        </Link>
 
-        {/* PRODUCT INFO */}
+        {/* JO NUMBER + EDIT */}
         <div
           style={{
             border: '1px solid rgba(255,255,255,0.22)',
             borderRadius: 16,
             padding: 20,
             background: '#111',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
-          <h1 style={{ fontSize: 24, fontWeight: 600 }}>
-            JO {record.jo_number}
-          </h1>
-
-          <div style={{ marginTop: 8, opacity: 0.85 }}>
-            {record.item_name ?? '(no name)'}
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 600 }}>
+              {record.jo_number}
+            </h1>
+            <div style={{ marginTop: 8, opacity: 0.85 }}>
+              {record.item_name ?? '(no name)'}
+            </div>
+            <div style={{ marginTop: 4, fontSize: 14 }}>
+              Classification:{' '}
+              <strong>{record.classification ?? 'Unclassified'}</strong>
+            </div>
           </div>
 
-          <div style={{ marginTop: 4, fontSize: 14 }}>
-            Classification:{' '}
-            <strong>{record.classification ?? 'Unclassified'}</strong>
+          <button
+            onClick={() => {
+              if (isEditing) {
+                setEditedNotes(record.notes ?? '');
+              }
+              setIsEditing(!isEditing);
+            }}
+            style={{
+              padding: '16px 28px',
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.4)',
+              background: '#0b0b0b',
+              color: '#fff',
+              cursor: 'pointer',
+            }}
+          >
+            {isEditing ? 'Cancel' : 'Edit'}
+          </button>
+        </div>
+
+        {/* IMAGE + NOTES */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 2fr',
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#111',
+              borderRadius: 16,
+              border: '1px solid rgba(255,255,255,0.22)',
+              minHeight: 220,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#777',
+            }}
+          >
+            Upload Image
+          </div>
+
+          <div
+            style={{
+              backgroundColor: '#111',
+              borderRadius: 16,
+              border: '1px solid rgba(255,255,255,0.22)',
+              padding: 16,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            <div style={{ fontSize: 13, opacity: 0.8 }}>Notes</div>
+
+            <textarea
+              value={isEditing ? editedNotes : record.notes ?? ''}
+              onChange={(e) => setEditedNotes(e.target.value)}
+              readOnly={!isEditing}
+              style={{
+                flex: 1,
+                resize: 'none',
+                backgroundColor: '#0b0b0b',
+                border: '1px solid #333',
+                borderRadius: 12,
+                padding: 12,
+                color: '#fff',
+                fontSize: 14,
+                cursor: isEditing ? 'text' : 'default',
+
+                // 👇 key part
+                outline: isEditing ? undefined : 'none',
+                boxShadow: isEditing ? undefined : 'none',
+              }}
+            />
+
+            {isEditing && (
+              <button
+                onClick={saveNotes}
+                disabled={saving}
+                style={{
+                  alignSelf: 'flex-end',
+                  padding: '10px 18px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,0.4)',
+                  background: '#0b0b0b',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                {saving ? 'Saving…' : 'Save Notes'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -282,7 +408,6 @@ export default function JewelryDetailClient({
               marginTop: 16,
               padding: 16,
               background: '#0b0b0b',
-              color: '#fff',
               borderRadius: 8,
               fontSize: 13,
               fontFamily: 'monospace',
@@ -293,20 +418,19 @@ export default function JewelryDetailClient({
           </pre>
         </div>
 
-        {/* TOGGLE */}
+        {/* CALCULATOR TOGGLE */}
         <button
           onClick={() => {
             if (showCalculator) resetCalculator();
-            setShowCalculator((v) => !v);
+            setShowCalculator(!showCalculator);
           }}
           style={{
             alignSelf: 'flex-start',
             padding: '10px 16px',
             borderRadius: 12,
             border: '1px solid rgba(255,255,255,0.4)',
-            background: 'rgba(255, 255, 255, 0.03)',
+            background: 'rgba(255,255,255,0.03)',
             color: '#fff',
-            fontSize: 16,
             fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -316,7 +440,6 @@ export default function JewelryDetailClient({
             : 'Show Updated Cost Calculator'}
         </button>
 
-        {/* CALCULATOR */}
         {showCalculator && (
           <div
             style={{
@@ -330,13 +453,7 @@ export default function JewelryDetailClient({
               fontFamily: 'monospace',
             }}
           >
-            <h2
-              style={{
-                fontSize: 24,
-                fontWeight: 600,
-                textAlign: 'center',
-              }}
-            >
+            <h2 style={{ fontSize: 24, textAlign: 'center' }}>
               UPDATED COST CALCULATOR
             </h2>
 
@@ -366,37 +483,6 @@ export default function JewelryDetailClient({
                 setWeights={setWeightsSilver}
               />
             </div>
-
-            {/* BREAKDOWN */}
-            <h3 style={{ textAlign: 'center', fontSize: 16, fontWeight: 600 }}>
-              PRICE BREAKDOWN
-            </h3>
-
-            <div
-              style={{
-                display: 'flex',
-                gap: 16,
-                flexWrap: 'wrap',
-                fontSize: 13,
-              }}
-            >
-              {Object.entries(breakdown).map(([metal, rows]) => {
-                const key = metal as MetalKey;
-                return (
-                  <div key={metal} style={{ flex: '1 1 300px' }}>
-                    <strong>{METAL_LABELS[key]}</strong>
-                    {rows.map((r, i) => (
-                      <div key={i}>
-                        {r.weight}g × {pesoFormatter.format(METAL_PRICES[key])}{' '}
-                        = {pesoFormatter.format(r.subtotal)}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-
-            <hr />
 
             <div style={{ fontSize: 28, fontWeight: 700 }}>
               Final Updated Cost: {pesoFormatter.format(total)}
