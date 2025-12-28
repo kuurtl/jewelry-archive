@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { updateMetalPrices } from '@/lib/updateMetalPrices';
 
-export async function POST() {
+async function handler() {
   try {
     const prices = await updateMetalPrices();
     return NextResponse.json({ success: true, prices });
@@ -15,4 +15,12 @@ export async function POST() {
       { status: 500 }
     );
   }
+}
+
+export async function POST() {
+  return handler();
+}
+
+export async function GET() {
+  return handler();
 }
