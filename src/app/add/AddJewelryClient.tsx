@@ -268,6 +268,20 @@ export default function AddJewelryClient() {
       >
         {saving ? 'Creating…' : 'Create Jewelry'}
       </button>
+      <style>
+        {`
+    @media (max-width: 640px) {
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .form-row > div:last-child {
+        width: 100%;
+      }
+    }
+  `}
+      </style>
     </div>
   );
 }
@@ -277,6 +291,7 @@ export default function AddJewelryClient() {
 // --------------------
 const row = (label: string, field: React.ReactNode) => (
   <div
+    className="form-row"
     style={{
       display: 'grid',
       gridTemplateColumns: '160px auto',
@@ -342,14 +357,16 @@ const ComponentSection = ({
 );
 
 const inputStyle: React.CSSProperties = {
-  width: 260,
+  width: '100%',
+  maxWidth: 260,
   padding: '6px 8px',
   borderRadius: 4,
   border: '1px solid #ccc',
 };
 
 const textareaStyle: React.CSSProperties = {
-  width: 360,
+  width: '100%',
+  maxWidth: 360,
   minHeight: 80,
   padding: '6px 8px',
   borderRadius: 4,
