@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 import { supabaseClient } from '@/lib/supabaseClient';
 
@@ -74,18 +75,26 @@ export default function AddJewelryClient() {
   // --------------------
   // Helpers
   // --------------------
-  const addRow = (setter: (r: Row[]) => void) =>
+  const addRow = (setter: React.Dispatch<React.SetStateAction<Row[]>>) => {
     setter((prev) => [...prev, { value: '' }]);
+  };
 
   const updateRow = (
     rows: Row[],
     index: number,
     value: string,
-    setter: (r: Row[]) => void
-  ) => setter(rows.map((r, i) => (i === index ? { value } : r)));
+    setter: React.Dispatch<React.SetStateAction<Row[]>>
+  ) => {
+    setter(rows.map((r, i) => (i === index ? { value } : r)));
+  };
 
-  const removeRow = (rows: Row[], index: number, setter: (r: Row[]) => void) =>
+  const removeRow = (
+    rows: Row[],
+    index: number,
+    setter: React.Dispatch<React.SetStateAction<Row[]>>
+  ) => {
     setter(rows.filter((_, i) => i !== index));
+  };
 
   const buildArray = (rows: Row[]) =>
     rows.map((r) => r.value.trim()).filter(Boolean);
