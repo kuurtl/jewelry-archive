@@ -44,6 +44,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const secret = searchParams.get('secret');
 
+  console.log('CRON CHECK', {
+    received: secret,
+    expected: process.env.CRON_SECRET,
+  });
+
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
