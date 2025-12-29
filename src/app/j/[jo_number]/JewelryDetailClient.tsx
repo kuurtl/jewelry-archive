@@ -835,7 +835,35 @@ export default function JewelryDetailClient({
                 setWeights={setWeightsSilver}
               />
             </div>
+            <h3 style={{ textAlign: 'center', fontSize: 16, fontWeight: 600 }}>
+              PRICE BREAKDOWN
+            </h3>
 
+            <div
+              style={{
+                display: 'flex',
+                gap: 16,
+                flexWrap: 'wrap',
+                fontSize: 13,
+              }}
+            >
+              {Object.entries(breakdown).map(([metal, rows]) => {
+                const key = metal as MetalKey;
+                return (
+                  <div key={metal} style={{ flex: '1 1 300px' }}>
+                    <strong>{METAL_LABELS[key]}</strong>
+                    {rows.map((r, i) => (
+                      <div key={i}>
+                        {r.weight}g × {pesoFormatter.format(METAL_PRICES[key])}{' '}
+                        = {pesoFormatter.format(r.subtotal)}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+
+            <hr />
             <div style={{ fontSize: 28, fontWeight: 700 }}>
               Final Updated Cost: {pesoFormatter.format(total)}
             </div>

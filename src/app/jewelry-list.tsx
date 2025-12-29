@@ -11,6 +11,7 @@ type JewelryListItem = {
   classification: string | null;
   jewelry_components?: unknown;
   image_url?: string | null;
+  notes?: string | null;
 };
 
 export default function JewelryList({ items }: { items: JewelryListItem[] }) {
@@ -58,7 +59,9 @@ export default function JewelryList({ items }: { items: JewelryListItem[] }) {
           ' ' +
           (item.item_name ?? '') +
           ' ' +
-          (item.classification ?? '');
+          (item.classification ?? '') +
+          ' ' +
+          (item.notes ?? '');
 
         const componentText = includeComponents
           ? ' ' + JSON.stringify(item.jewelry_components ?? {})
