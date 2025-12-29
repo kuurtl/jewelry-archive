@@ -192,6 +192,8 @@ export default function JewelryDetailClient({
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [itemName, setItemName] = useState(currentRecord.item_name ?? '');
   const [classification, setClassification] = useState(
@@ -356,6 +358,28 @@ export default function JewelryDetailClient({
 
     setIsEditing(false);
     setFocusedField(null);
+  }
+  async function handleDelete() {
+    const confirmed = confirm(
+      `Delete ${currentRecord.jo_number}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+
+    const { error } = await supabase
+      .from('jewelry_archive')
+      .delete()
+      .eq('jo_number', currentRecord.jo_number);
+
+    setDeleting(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    window.location.href = '/';
   }
 
   const handlePrintDetails = () => {
@@ -867,26 +891,94 @@ ${lines.join('\n')}
         </div>
 
         {/* CALCULATOR TOGGLE */}
-        <button
-          onClick={() => {
-            if (showCalculator) resetCalculator();
-            setShowCalculator(!showCalculator);
-          }}
+        {/* CALCULATOR TOGGLE + DELETE */}
+        <div
           style={{
-            alignSelf: 'flex-start',
-            padding: '10px 16px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,255,255,0.4)',
-            background: 'rgba(255,255,255,0.03)',
-            color: '#fff',
-            fontWeight: 600,
-            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
-          {showCalculator
-            ? 'Hide Updated Cost Calculator'
-            : 'Show Updated Cost Calculator'}
-        </button>
+          <button
+            onClick={() => {
+              if (showCalculator) resetCalculator();
+              setShowCalculator(!showCalculator);
+            }}
+            style={{
+              padding: '10px 16px',
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.4)',
+              background: 'rgba(255,255,255,0.03)',
+              color: '#fff',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {showCalculator
+              ? 'Hide Updated Cost Calculator'
+              : 'Show Updated Cost Calculator'}
+          </button>
+
+          {isEditing && (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(255,80,80,0.6)',
+                    background: '#1a0000',
+                    color: '#ff9a9a',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Delete {currentRecord.jo_number}
+                </button>
+              ) : (
+                <>
+                  <span style={{ fontSize: 12, opacity: 0.75 }}>
+                    Are you sure?
+                  </span>
+
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      border: '1px solid #ff5a5a',
+                      background: '#300',
+                      color: '#fff',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {deleting ? 'Deleting…' : 'Yes'}
+                  </button>
+
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      border: '1px solid rgba(255,255,255,0.3)',
+                      background: '#111',
+                      color: '#fff',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {showCalculator && (
           <div

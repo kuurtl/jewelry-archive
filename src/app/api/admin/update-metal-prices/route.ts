@@ -19,10 +19,28 @@ async function handler() {
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
+  const secret = req.headers.get('x-cron-secret');
+
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
   return handler();
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  const secret = req.headers.get('x-cron-secret');
+
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
   return handler();
 }

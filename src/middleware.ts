@@ -4,6 +4,10 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  if (pathname.startsWith('/api/cron')) {
+    return NextResponse.next();
+  }
+
   // Allow access page + access API + Next internals
   if (
     pathname.startsWith('/access') ||
