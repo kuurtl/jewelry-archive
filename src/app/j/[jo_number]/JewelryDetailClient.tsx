@@ -191,6 +191,7 @@ export default function JewelryDetailClient({
   const [isEditing, setIsEditing] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [jsonError, setJsonError] = useState<string | null>(null);
 
   const [itemName, setItemName] = useState(currentRecord.item_name ?? '');
   const [classification, setClassification] = useState(
@@ -309,21 +310,31 @@ export default function JewelryDetailClient({
   async function saveAll() {
     setSaving(true);
 
-    let parsedComponents: Record<string, unknown>;
+    let parsedComponents: unknown;
+
     try {
       parsedComponents = JSON.parse(componentsText);
-    } catch {
-      alert('Jewelry Components must be valid JSON.');
+    } catch (err) {
+      if (err instanceof Error) {
+        setJsonError(`Invalid JSON: ${err.message}`);
+      } else {
+        setJsonError('Invalid JSON.');
+      }
       setSaving(false);
-      return;
+      return; // 🚫 BLOCK SAVE
     }
+    const formatted = JSON.stringify(parsedComponents, null, 2);
+    setComponentsText(formatted);
+    setJsonError(null);
+
+    const componentsForDb = parsedComponents as Record<string, unknown>;
 
     const { error } = await supabase
       .from('jewelry_archive')
       .update({
         item_name: itemName,
         classification,
-        jewelry_components: parsedComponents,
+        jewelry_components: componentsForDb,
         notes,
       })
       .eq('jo_number', currentRecord.jo_number);
@@ -339,7 +350,7 @@ export default function JewelryDetailClient({
       ...currentRecord,
       item_name: itemName,
       classification,
-      jewelry_components: parsedComponents,
+      jewelry_components: componentsForDb,
       notes,
     });
 
@@ -804,34 +815,52 @@ ${lines.join('\n')}
               {JSON.stringify(currentRecord.jewelry_components, null, 2)}
             </pre>
           ) : (
-            <textarea
-              value={componentsText}
-              onChange={(e) => setComponentsText(e.target.value)}
-              tabIndex={isEditing ? 0 : -1}
-              onFocus={() => {
-                if (isEditing) setFocusedField('components');
-              }}
-              onBlur={() => {
-                if (isEditing) setFocusedField(null);
-              }}
-              style={{
-                marginTop: 16,
-                padding: 16,
-                background: '#0b0b0b',
-                borderRadius: 8,
-                fontSize: 13,
-                fontFamily: 'monospace',
-                overflowX: 'auto',
-                width: '100%',
-                minHeight: 260,
-                resize: 'vertical',
-                border: '1px solid #555',
-                outline: 'none',
-                ...(isEditing && focusedField === 'components'
-                  ? focusGlow
-                  : {}),
-              }}
-            />
+            <>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>
+                Must be valid JSON (double quotes, no trailing commas).
+              </div>
+
+              {jsonError && (
+                <div
+                  style={{
+                    color: 'salmon',
+                    fontSize: 13,
+                    marginTop: 8,
+                  }}
+                >
+                  {jsonError}
+                </div>
+              )}
+
+              <textarea
+                value={componentsText}
+                onChange={(e) => setComponentsText(e.target.value)}
+                tabIndex={isEditing ? 0 : -1}
+                onFocus={() => {
+                  if (isEditing) setFocusedField('components');
+                }}
+                onBlur={() => {
+                  if (isEditing) setFocusedField(null);
+                }}
+                style={{
+                  marginTop: 16,
+                  padding: 16,
+                  background: '#0b0b0b',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  overflowX: 'auto',
+                  width: '100%',
+                  minHeight: 260,
+                  resize: 'vertical',
+                  border: '1px solid #555',
+                  outline: 'none',
+                  ...(isEditing && focusedField === 'components'
+                    ? focusGlow
+                    : {}),
+                }}
+              />
+            </>
           )}
         </div>
 

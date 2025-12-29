@@ -6,6 +6,7 @@ import {
   ClassificationSelect,
   IncludeComponentsCheckbox,
 } from './search-controls';
+import Link from 'next/link';
 
 export default function HeaderShell() {
   const pathname = usePathname();
@@ -28,17 +29,49 @@ export default function HeaderShell() {
           style={{
             display: 'flex',
             gap: 16,
-            alignItems: 'center',
+            alignItems: 'stretch',
             flexWrap: 'wrap',
-            padding: 20,
-            borderRadius: 16,
-            backgroundColor: '#111',
-            border: '1px solid rgba(255, 255, 255, 0.28)',
           }}
         >
-          <SearchInput />
-          <ClassificationSelect />
-          <IncludeComponentsCheckbox />
+          {/* MAIN HEADER PANEL */}
+          <div
+            style={{
+              display: 'flex',
+              gap: 16,
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              padding: 20,
+              borderRadius: 16,
+              backgroundColor: '#111',
+              border: '1px solid rgba(255, 255, 255, 0.28)',
+              flex: 1,
+            }}
+          >
+            <SearchInput />
+            <ClassificationSelect />
+            <IncludeComponentsCheckbox />
+          </div>
+
+          {/* + ADD JEWELRY PANEL */}
+          <Link
+            href="/add"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px 28px',
+              borderRadius: 16,
+              backgroundColor: '#111',
+              border: '1px solid rgba(255, 255, 255, 0.28)',
+              color: '#fff',
+              fontSize: 30,
+              fontWeight: 400,
+              textDecoration: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            +
+          </Link>
         </div>
       </div>
     </header>
