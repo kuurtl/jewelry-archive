@@ -89,7 +89,7 @@ export default function JewelryList({ items }: { items: JewelryListItem[] }) {
             }}
           >
             <Link
-              href={`/j/${item.jo_number}`}
+              href={`/j/${encodeURIComponent(item.jo_number)}`}
               style={{ textDecoration: 'none', color: 'inherit' }}
             >
               <div

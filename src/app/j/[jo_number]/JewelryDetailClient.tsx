@@ -254,6 +254,37 @@ export default function JewelryDetailClient({
     }
   }
 
+  // ✅ ADDED: Remove photo (delete from storage + clear DB + update local state)
+  async function handleRemoveImage() {
+    if (!currentRecord.image_url) return;
+
+    const confirmed = confirm('Remove photo? This cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      const pathToRemove = currentRecord.image_url;
+
+      const { error: storageError } = await supabase.storage
+        .from('jewelry-images')
+        .remove([pathToRemove]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('jewelry_archive')
+        .update({ image_url: null })
+        .eq('jo_number', currentRecord.jo_number);
+
+      if (dbError) throw dbError;
+
+      setCurrentRecord((r) => ({ ...r, image_url: null }));
+      setImageBust(Date.now());
+    } catch (e) {
+      console.error(e);
+      alert('Failed to remove photo.');
+    }
+  }
+
   const [classificationOptions, setClassificationOptions] = useState<string[]>(
     []
   );
@@ -553,7 +584,7 @@ export default function JewelryDetailClient({
               backgroundColor: '#111',
               borderRadius: 16,
               border: '1px solid rgba(255,255,255,0.22)',
-              height: 'clamp(180px, 30vw, 260px)', // ✅ responsive fixed panel height
+              height: 'clamp(180px, 30vw, 260px)', // existing
               position: 'relative',
               overflow: 'hidden',
             }}
@@ -563,7 +594,7 @@ export default function JewelryDetailClient({
               alt={currentRecord.item_name ?? currentRecord.jo_number}
               style={{
                 position: 'absolute',
-                inset: 0,
+                inset: '12px 0', // ✅ ONLY CHANGE: padding top/bottom (12px), none on sides
                 width: '100%',
                 height: '100%',
                 objectFit: 'contain',
@@ -586,27 +617,57 @@ export default function JewelryDetailClient({
                   }}
                 />
 
-                <label
-                  htmlFor="imageUploadInput"
+                {/* ✅ Change: wrap controls so Remove can sit below Replace without changing panel styling */}
+                <div
                   style={{
                     position: 'absolute',
                     bottom: 12,
                     left: 12,
                     right: 12,
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(255,255,255,0.4)',
-                    background: '#0b0b0b',
-                    color: '#fff',
-                    cursor: uploadingImage ? 'default' : 'pointer',
-                    opacity: uploadingImage ? 0.6 : 1,
-                    textAlign: 'center',
-                    fontSize: 13,
-                    userSelect: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 8,
                   }}
                 >
-                  {uploadingImage ? 'Uploading…' : 'Replace photo'}
-                </label>
+                  <label
+                    htmlFor="imageUploadInput"
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 12,
+                      border: '1px solid rgba(255,255,255,0.4)',
+                      background: '#0b0b0b',
+                      color: '#fff',
+                      cursor: uploadingImage ? 'default' : 'pointer',
+                      opacity: uploadingImage ? 0.6 : 1,
+                      textAlign: 'center',
+                      fontSize: 13,
+                      userSelect: 'none',
+                    }}
+                  >
+                    {uploadingImage ? 'Uploading…' : 'Replace photo'}
+                  </label>
+
+                  {currentRecord.image_url && (
+                    <button
+                      onClick={handleRemoveImage}
+                      disabled={uploadingImage}
+                      style={{
+                        padding: '10px 12px',
+                        borderRadius: 12,
+                        border: '1px solid rgba(255,255,255,0.4)',
+                        background: '#0b0b0b',
+                        color: '#fff',
+                        cursor: uploadingImage ? 'default' : 'pointer',
+                        opacity: uploadingImage ? 0.6 : 1,
+                        textAlign: 'center',
+                        fontSize: 13,
+                        userSelect: 'none',
+                      }}
+                    >
+                      Remove photo
+                    </button>
+                  )}
+                </div>
               </>
             )}
           </div>

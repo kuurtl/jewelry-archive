@@ -26,8 +26,8 @@ type PageProps = {
 };
 
 export default async function JewelryDetailPage({ params }: PageProps) {
-  // Explicitly unwrap params
-  const { jo_number } = await params;
+  const raw = (await params).jo_number;
+  const jo_number = decodeURIComponent(raw);
 
   const supabase = createSupabaseServerClient();
 
