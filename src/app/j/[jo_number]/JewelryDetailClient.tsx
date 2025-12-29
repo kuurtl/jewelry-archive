@@ -584,19 +584,20 @@ export default function JewelryDetailClient({
               backgroundColor: '#111',
               borderRadius: 16,
               border: '1px solid rgba(255,255,255,0.22)',
-              height: 'clamp(180px, 30vw, 260px)', // existing
-              position: 'relative',
+              height: 'clamp(180px, 30vw, 260px)',
               overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '12px 0', // internal padding
             }}
           >
             <img
               src={getImageSrc()}
               alt={currentRecord.item_name ?? currentRecord.jo_number}
               style={{
-                position: 'absolute',
-                inset: '12px 0', // ✅ ONLY CHANGE: padding top/bottom (12px), none on sides
-                width: '100%',
-                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
                 objectFit: 'contain',
                 display: 'block',
               }}
