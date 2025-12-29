@@ -347,6 +347,43 @@ export default function JewelryDetailClient({
     setFocusedField(null);
   }
 
+  const handlePrintDetails = () => {
+    const lines = [
+      `JO_NUMBER: ${currentRecord.jo_number}`,
+      `ITEM_NAME: ${currentRecord.item_name ?? ''}`,
+      `CLASSIFICATION: ${currentRecord.classification ?? ''}`,
+      `JEWELRY_COMPONENTS:`,
+      JSON.stringify(currentRecord.jewelry_components ?? {}, null, 2),
+      `NOTES: ${currentRecord.notes ?? ''}`,
+      `IMAGE_URL: ${currentRecord.image_url ?? ''}`,
+    ];
+
+    const safeJoForTitle = currentRecord.jo_number
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9._-]/g, '');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>${safeJoForTitle}</title>
+      </head>
+      <body style="margin: 24px; background: #fff; color: #000;">
+        <pre style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px;">
+${lines.join('\n')}
+        </pre>
+      </body>
+    </html>
+  `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   function cancelEdit() {
     setItemName(currentRecord.item_name ?? '');
     setClassification(currentRecord.classification ?? '');
@@ -417,16 +454,42 @@ export default function JewelryDetailClient({
           gap: 24,
         }}
       >
-        <Link
-          href="/"
+        <div
           style={{
-            color: 'rgba(255,255,255,0.7)',
-            fontSize: 14,
-            textDecoration: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}
         >
-          ← Back to archive
-        </Link>
+          <Link
+            href="/"
+            style={{
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: 13,
+              textDecoration: 'none',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.4)',
+              padding: '8px 12px',
+            }}
+          >
+            ← Back to archive
+          </Link>
+
+          <button
+            onClick={handlePrintDetails}
+            style={{
+              fontSize: 13,
+              padding: '8px 12px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,0.4)',
+              background: '#111',
+              color: 'rgba(255,255,255,0.7)',
+              cursor: 'pointer',
+            }}
+          >
+            Print product details
+          </button>
+        </div>
 
         {/* JO NUMBER + EDIT */}
         <div
