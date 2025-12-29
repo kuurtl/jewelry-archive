@@ -590,6 +590,7 @@ export default function JewelryDetailClient({
               alignItems: 'center',
               justifyContent: 'center',
               padding: '12px 0', // internal padding
+              position: 'relative',
             }}
           >
             <img
