@@ -469,7 +469,8 @@ ${lines.join('\n')}
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-start',
+            flexWrap: 'wrap',
           }}
         >
           <Link
@@ -511,7 +512,8 @@ ${lines.join('\n')}
             background: '#111',
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-start',
+            ...(isEditing ? { flexWrap: 'wrap' } : {}),
           }}
         >
           <div>
@@ -611,7 +613,7 @@ ${lines.join('\n')}
               Edit
             </button>
           ) : (
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="edit-actions" style={{ display: 'flex', gap: 10 }}>
               <button
                 onClick={saveAll}
                 disabled={saving}
@@ -964,6 +966,26 @@ ${lines.join('\n')}
           </div>
         )}
       </div>
+      <style>
+        {`
+    @media (max-width: 640px) {
+  .edit-actions {
+    width: 100%;
+    flex-basis: 100%;
+    margin-top: 16px;
+    justify-content: flex-start;
+  }
+
+  .edit-actions button {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 13px;
+    border-radius:10px;
+  }
+}
+
+  `}
+      </style>
     </main>
   );
 }
