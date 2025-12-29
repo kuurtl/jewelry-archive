@@ -20,7 +20,15 @@ async function handler() {
 }
 
 export async function POST(req: Request) {
-  const secret = req.headers.get('x-cron-secret');
+  const { searchParams } = new URL(req.url);
+  const secret = searchParams.get('secret');
+
+  if (secret !== process.env.CRON_SECRET) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
 
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json(
@@ -33,7 +41,8 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const secret = req.headers.get('x-cron-secret');
+  const { searchParams } = new URL(req.url);
+  const secret = searchParams.get('secret');
 
   if (secret !== process.env.CRON_SECRET) {
     return NextResponse.json(
