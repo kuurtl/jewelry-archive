@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/admin/update-metal-prices?secret=@cron_secret",
-      "schedule": "0 0 * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }
