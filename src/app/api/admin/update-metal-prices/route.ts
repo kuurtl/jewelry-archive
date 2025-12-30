@@ -42,15 +42,17 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization');
-
-  // This allows the Vercel Cron to work
   const isCron = authHeader === `Bearer ${process.env.CRON_SECRET}`;
 
-  // This allows YOU to trigger it manually from your browser while logged in
-  // because the middleware already verified your cookie
-  if (!isCron) {
-    // If it's not the cron, we just double check the header wasn't required
-    // strictly, or you can just let it run if the middleware passed it.
+  // Get the admin cookie (same check as middleware)
+  const cookieHeader = req.headers.get('cookie') || '';
+  const isAdmin = cookieHeader.includes('admin_access=true');
+
+  if (!isCron && !isAdmin) {
+    return NextResponse.json(
+      { success: false, error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
 
   return handler();
