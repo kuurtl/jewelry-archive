@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/admin/update-metal-prices?secret=@cron_secret",
+      "path": "/api/admin/update-metal-prices",
       "schedule": "*/5 * * * *"
     }
   ]
